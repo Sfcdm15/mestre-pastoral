@@ -65,7 +65,7 @@ async function copyText(text) {
 }
 
 // ---------- Navegação entre abas ----------
-const VIEWS = ["home", "bible", "harpa", "chat", "search", "favs"];
+const VIEWS = ["home", "bible", "harpa", "chat", "search", "favs", "oferta"];
 const viewHooks = {}; // bible.js registra callbacks ao entrar em cada aba
 function setView(name) {
   if (!VIEWS.includes(name)) name = "home";
@@ -77,6 +77,8 @@ function setView(name) {
 }
 document.querySelectorAll(".tab").forEach((t) => (t.onclick = () => setView(t.dataset.view)));
 $("#brandHome")?.addEventListener("click", () => setView("home"));
+$("#topOfertaBtn")?.addEventListener("click", () => setView("oferta"));
+$("#topFavsBtn")?.addEventListener("click", () => setView("favs"));
 
 // ---------- Markdown leve (seguro: escapa HTML antes) ----------
 function inline(s) {
@@ -311,10 +313,18 @@ $("#newChat").onclick = () => {
 };
 viewHooks.chat = () => scrollToBottom();
 
-// ---------- Registro do Service Worker e Instalação (PWA) ----------
+// ---------- Registro do Service Worker e Limpeza de Cache Antigo ----------
+if ("caches" in window) {
+  caches.keys().then((keys) => {
+    keys.filter((k) => k !== "mestre-pastoral-v6").forEach((k) => caches.delete(k));
+  }).catch(() => {});
+}
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
+    navigator.serviceWorker
+      .register("/sw.js?v=6", { updateViaCache: "none" })
+      .then((reg) => reg.update().catch(() => {}))
+      .catch(() => {});
   });
 }
 

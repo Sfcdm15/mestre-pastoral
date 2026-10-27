@@ -16,8 +16,11 @@ if (fs.existsSync(envPath)) {
 const PORT = Number(process.env.PORT) || 3000;
 const API_KEY = process.env.GEMINI_API_KEY;
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+const ADMIN_PIN = process.env.ADMIN_PIN || "pastor2026";
 const SYSTEM_PROMPT = fs.readFileSync(path.join(__dirname, "prompt.md"), "utf8");
 const PUBLIC_DIR = path.join(__dirname, "public");
+const OFERTA_DIR = path.join(__dirname, "OFERTA");
+const OFERTA_FILE = path.join(OFERTA_DIR, "config.json");
 
 // Descompacta blivre.json e harpa.json automaticamente se apenas o .gz tiver sido enviado ao servidor
 for (const name of ["blivre.json", "harpa.json"]) {
@@ -178,9 +181,81 @@ function serveStatic(req, res) {
   });
 }
 
+function loadOfertaConfig() {
+  try {
+    if (fs.existsSync(OFERTA_FILE)) {
+      return JSON.parse(fs.readFileSync(OFERTA_FILE, "utf8"));
+    }
+  } catch {}
+  return {
+    title: "Ajude Famílias e Mantenha Esta Obra no Ar",
+    subtitle:
+      "Sua oferta de amor transforma vidas através de cestas básicas para famílias necessitadas e mantém o Mestre Pastoral gratuito e ativo para todos.",
+    pixKey: process.env.OFERTA_PIX_KEY || "",
+    pixType: "Chave PIX (Nubank)",
+    pixHolder: process.env.OFERTA_PIX_HOLDER || "",
+    pixBank: process.env.OFERTA_PIX_BANK || "Nubank",
+    pixCity: "SAO PAULO",
+    paymentLink: process.env.OFERTA_PAYMENT_LINK || "",
+    autoRedirect: false,
+    goalText: "Arrecadação de cestas básicas para famílias carentes e custeio do servidor do aplicativo.",
+  };
+}
+
+async function handleOferta(req, res) {
+  if (req.method === "GET") {
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-cache" });
+    return res.end(JSON.stringify(loadOfertaConfig()));
+  }
+  if (req.method === "POST") {
+    let body;
+    try {
+      body = JSON.parse(await readBody(req));
+    } catch {
+      res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+      return res.end("JSON inválido.");
+    }
+    if (String(body.pin || "").trim() !== ADMIN_PIN) {
+      res.writeHead(401, { "Content-Type": "text/plain; charset=utf-8" });
+      return res.end("Senha de administrador incorreta.");
+    }
+    if (body.checkOnly) {
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      return res.end(JSON.stringify({ ok: true, config: loadOfertaConfig() }));
+    }
+    const current = loadOfertaConfig();
+    const updated = {
+      title: String(body.title ?? current.title).slice(0, 140),
+      subtitle: String(body.subtitle ?? current.subtitle).slice(0, 400),
+      pixKey: String(body.pixKey ?? current.pixKey).trim().slice(0, 140),
+      pixType: String(body.pixType ?? current.pixType).trim().slice(0, 60),
+      pixHolder: String(body.pixHolder ?? current.pixHolder).trim().slice(0, 80),
+      pixBank: String(body.pixBank ?? current.pixBank).trim().slice(0, 60),
+      pixCity: String(body.pixCity ?? current.pixCity).trim().slice(0, 40),
+      paymentLink: String(body.paymentLink ?? current.paymentLink).trim().slice(0, 500),
+      autoRedirect: Boolean(body.autoRedirect),
+      goalText: String(body.goalText ?? current.goalText).trim().slice(0, 300),
+    };
+    fs.mkdirSync(OFERTA_DIR, { recursive: true });
+    fs.writeFileSync(OFERTA_FILE, JSON.stringify(updated, null, 2));
+    try {
+      const mirrorDir = path.join(__dirname, "enviar-para-github", "OFERTA");
+      if (fs.existsSync(path.join(__dirname, "enviar-para-github"))) {
+        fs.mkdirSync(mirrorDir, { recursive: true });
+        fs.writeFileSync(path.join(mirrorDir, "config.json"), JSON.stringify(updated, null, 2));
+      }
+    } catch {}
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    return res.end(JSON.stringify({ ok: true, config: updated }));
+  }
+  res.writeHead(405);
+  res.end();
+}
+
 http
   .createServer((req, res) => {
     if (req.method === "POST" && req.url === "/api/chat") return handleChat(req, res);
+    if (req.url === "/api/oferta") return handleOferta(req, res);
     if (req.method === "GET" && req.url === "/api/health") {
       res.writeHead(200, { "Content-Type": "application/json" });
       return res.end(JSON.stringify({ ok: true, model: MODEL, apiKey: Boolean(API_KEY) }));

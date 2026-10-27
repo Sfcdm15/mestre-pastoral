@@ -1,0 +1,23 @@
+================================================================
+  PASTA OFERTA — MESTRE PASTORAL (Ação Social & Custeio do Site)
+================================================================
+
+Esta pasta armazena as configurações da aba "❤️ Oferta" do aplicativo
+Mestre Pastoral (destinada à arrecadação para compra de Cestas Básicas
+para famílias necessitadas e manutenção/custeio do site).
+
+COMO CONFIGURAR PELO PRÓPRIO APLICATIVO (ÁREA DO ADM):
+1. Abra o aplicativo Mestre Pastoral e clique em "❤️ Oferta"
+   (no topo, na barra inferior ou no banner "Ajude Famílias" da tela inicial).
+2. Role até o final da página de Oferta e clique no botão discreto:
+   "🔒 Área do ADM (Configurar PIX / Link de Oferta)"
+3. Digite a sua Senha de ADM:
+   Senha padrão: pastor2026
+   (Você pode alterar essa senha adicionando ADMIN_PIN=suasenha no arquivo .env)
+4. Preencha:
+   - Link de Pagamento (Nubank / Mercado Pago / InfinitePay que aceite PIX e Cartão)
+   - Marque ou desmarque a opção "Redirecionar automaticamente"
+   - Sua Chave PIX, Banco (ex: Nubank) e Nome do Recebedor
+5. Clique em "💾 Salvar e Publicar Dados de Oferta".
+
+Os dados ficam salvos no arquivo "config.json" dentro desta pasta OFERTA.

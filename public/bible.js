@@ -860,9 +860,13 @@ function initHarpaEvents() {
   });
 }
 
+let harpaLoading = false;
 async function loadHarpa() {
+  if (HARPA || harpaLoading) return;
+  harpaLoading = true;
   try {
-    const res = await fetch("bible/harpa.json");
+    let res = await fetch("bible/harpa.json?v=5");
+    if (!res.ok) res = await fetch("bible/harpa.json?v=5", { cache: "reload" });
     if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
     HARPA = data.hymns.map((h) => {
@@ -876,8 +880,207 @@ async function loadHarpa() {
     });
     renderHarpaList(false);
   } catch (err) {
-    $("#harpaList").innerHTML = `<p class="empty">Não foi possível carregar a Harpa Cristã (${escapeHtml(err.message)}).</p>`;
+    $("#harpaList").innerHTML = `<div class="empty">Não foi possível carregar a Harpa Cristã (${escapeHtml(err.message)}).<br><br><button type="button" class="btn-outline" onclick="loadHarpa()">🔄 Tentar novamente</button></div>`;
+  } finally {
+    harpaLoading = false;
   }
+}
+
+// ---------- Oferta (Ação Social + Custeio + Painel Exclusivo do ADM) ----------
+const OFERTA_LOCAL_KEY = "mestre-pastoral:oferta-cache";
+let ofertaConfig = loadJSON(OFERTA_LOCAL_KEY, {
+  title: "Ajude Famílias e Mantenha Esta Obra no Ar",
+  subtitle:
+    "Sua oferta de amor transforma vidas através de cestas básicas para famílias necessitadas e mantém o Mestre Pastoral gratuito e ativo para todos.",
+  pixKey: "",
+  pixType: "Chave PIX",
+  pixHolder: "",
+  pixBank: "Nubank",
+  paymentLink: "",
+  autoRedirect: false,
+});
+let admPinSession = "";
+try {
+  admPinSession = (typeof sessionStorage !== "undefined" && sessionStorage.getItem("mestre-pastoral:adm-pin")) || "";
+} catch {}
+let redirectTimer = null;
+
+function stopOfertaRedirect() {
+  if (redirectTimer) {
+    clearTimeout(redirectTimer);
+    redirectTimer = null;
+  }
+  const notice = $("#ofertaRedirectNotice");
+  if (notice) notice.hidden = true;
+}
+
+function renderOferta(triggerRedirect = false) {
+  stopOfertaRedirect();
+  const c = ofertaConfig || {};
+  if ($("#ofertaTitle") && c.title) $("#ofertaTitle").textContent = c.title;
+  if ($("#ofertaSubtitle") && c.subtitle) $("#ofertaSubtitle").textContent = c.subtitle;
+
+  const hasLink = Boolean(c.paymentLink && c.paymentLink.trim());
+  const hasPix = Boolean(c.pixKey && c.pixKey.trim());
+
+  const linkBox = $("#ofertaLinkBox");
+  const pixBox = $("#ofertaPixBox");
+  const emptyBox = $("#ofertaEmptyBox");
+
+  if (linkBox) {
+    linkBox.hidden = !hasLink;
+    if (hasLink) {
+      $("#ofertaLinkBtn").href = c.paymentLink.trim();
+      $("#ofertaBankLabel").textContent = c.pixBank || "Nubank / Cartão / PIX";
+    }
+  }
+
+  if (pixBox) {
+    pixBox.hidden = !hasPix;
+    if (hasPix) {
+      $("#ofertaPixTypeLabel").textContent = "💠 " + (c.pixType || "Chave PIX Direta");
+      $("#ofertaPixBank").textContent = c.pixBank || "Nubank";
+      $("#ofertaPixKeyDisplay").textContent = c.pixKey.trim();
+      const holderRow = $("#ofertaHolderRow");
+      if (c.pixHolder && c.pixHolder.trim()) {
+        holderRow.hidden = false;
+        $("#ofertaPixHolder").textContent = c.pixHolder.trim();
+      } else {
+        holderRow.hidden = true;
+      }
+    }
+  }
+
+  if (emptyBox) {
+    emptyBox.hidden = hasLink || hasPix;
+  }
+
+  // Se o redirecionamento automático estiver ativado pelo ADM e houver link cadastrado
+  if (triggerRedirect && c.autoRedirect && hasLink && $("#admPanel")?.hidden) {
+    const notice = $("#ofertaRedirectNotice");
+    if (notice) {
+      notice.hidden = false;
+      notice.innerHTML = `<span>💜 Redirecionando em instantes para a página segura de pagamento (${escapeHtml(
+        c.pixBank || "Nubank"
+      )})…</span> <button type="button" id="cancelRedirectBtn" class="ghost" style="color:#4a157a;border-color:#b98ce0">Permanecer aqui</button>`;
+      $("#cancelRedirectBtn")?.addEventListener("click", stopOfertaRedirect);
+    }
+    redirectTimer = setTimeout(() => {
+      window.open(c.paymentLink.trim(), "_blank", "noopener");
+      if (notice) {
+        notice.innerHTML = `<span>✅ Página de pagamento aberta! Caso não tenha aberto, clique no botão roxo abaixo.</span>`;
+      }
+    }, 2800);
+  }
+}
+
+function populateAdmForm() {
+  const c = ofertaConfig || {};
+  $("#admPaymentLink").value = c.paymentLink || "";
+  $("#admAutoRedirect").checked = Boolean(c.autoRedirect);
+  $("#admPixKey").value = c.pixKey || "";
+  $("#admPixBank").value = c.pixBank || "Nubank";
+  $("#admPixHolder").value = c.pixHolder || "";
+  $("#admPixType").value = c.pixType || "Chave PIX (Nubank)";
+  $("#admTitle").value = c.title || "Ajude Famílias e Mantenha Esta Obra no Ar";
+  $("#admSubtitle").value =
+    c.subtitle ||
+    "Sua oferta de amor transforma vidas através de cestas básicas para famílias necessitadas e mantém o Mestre Pastoral gratuito e ativo para todos.";
+}
+
+async function loadOferta(triggerRedirect = false) {
+  try {
+    const res = await fetch("/api/oferta", { cache: "no-store" });
+    if (res.ok) {
+      const data = await res.json();
+      ofertaConfig = { ...ofertaConfig, ...data };
+      localStorage.setItem(OFERTA_LOCAL_KEY, JSON.stringify(ofertaConfig));
+    }
+  } catch {}
+  renderOferta(triggerRedirect);
+}
+
+function initOfertaEvents() {
+  $("#homeOfertaBanner")?.addEventListener("click", () => setView("oferta"));
+  $("#homeOfertaBtn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setView("oferta");
+  });
+
+  $("#copyPixKeyBtn")?.addEventListener("click", () => {
+    if (ofertaConfig.pixKey) {
+      copyText(ofertaConfig.pixKey.trim());
+      toast("Chave PIX copiada! Deus abençoe sua oferta 🙏");
+    }
+  });
+
+  $("#toggleAdmBtn")?.addEventListener("click", async () => {
+    stopOfertaRedirect();
+    const panel = $("#admPanel");
+    if (!panel.hidden) {
+      panel.hidden = true;
+      return;
+    }
+    const pin = admPinSession || prompt("🔒 Área restrita do Administrador (ADM).\nDigite a senha de ADM para configurar o PIX / Link:");
+    if (!pin) return;
+
+    try {
+      const res = await fetch("/api/oferta", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: pin.trim(), checkOnly: true }),
+      });
+      if (!res.ok) {
+        admPinSession = "";
+        try { sessionStorage.removeItem("mestre-pastoral:adm-pin"); } catch {}
+        toast("Senha de ADM incorreta ❌");
+        return;
+      }
+      admPinSession = pin.trim();
+      try { sessionStorage.setItem("mestre-pastoral:adm-pin", admPinSession); } catch {}
+      populateAdmForm();
+      panel.hidden = false;
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      toast("Painel do ADM desbloqueado 🔓");
+    } catch {
+      toast("Erro ao verificar senha no servidor");
+    }
+  });
+
+  $("#closeAdmBtn")?.addEventListener("click", () => {
+    $("#admPanel").hidden = true;
+  });
+
+  $("#admForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const payload = {
+      pin: admPinSession,
+      paymentLink: $("#admPaymentLink").value.trim(),
+      autoRedirect: $("#admAutoRedirect").checked,
+      pixKey: $("#admPixKey").value.trim(),
+      pixBank: $("#admPixBank").value.trim() || "Nubank",
+      pixHolder: $("#admPixHolder").value.trim(),
+      pixType: $("#admPixType").value.trim() || "Chave PIX",
+      title: $("#admTitle").value.trim(),
+      subtitle: $("#admSubtitle").value.trim(),
+    };
+    try {
+      const res = await fetch("/api/oferta", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao salvar");
+      ofertaConfig = { ...ofertaConfig, ...data.config };
+      localStorage.setItem(OFERTA_LOCAL_KEY, JSON.stringify(ofertaConfig));
+      renderOferta(false);
+      $("#admPanel").hidden = true;
+      toast("Dados de Oferta salvos e publicados com sucesso! 🙌");
+    } catch (err) {
+      toast("Não foi possível salvar: " + (err.message || err));
+    }
+  });
 }
 
 // ---------- Inicialização ----------
@@ -885,11 +1088,19 @@ viewHooks.home = updateHome;
 viewHooks.favs = renderFavs;
 viewHooks.search = () => setTimeout(() => searchInput.focus(), 50);
 viewHooks.bible = () => { if (BIBLE && !readerEl.querySelector(".verse")) renderReader(); };
-viewHooks.harpa = () => { if (HARPA && !$("#harpaList").querySelector(".harpa-card") && $("#harpaReaderView").hidden) renderHarpaList(false); };
+viewHooks.harpa = () => {
+  if (!HARPA) loadHarpa();
+  else if (!$("#harpaList").querySelector(".harpa-card") && $("#harpaReaderView").hidden) renderHarpaList(false);
+};
+viewHooks.oferta = () => {
+  loadOferta(true);
+};
 
 initHomeEvents();
 initHarpaEvents();
+initOfertaEvents();
 updateHome();
+loadOferta(false);
 
 async function loadBible() {
   try {

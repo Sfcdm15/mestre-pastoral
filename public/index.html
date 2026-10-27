@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-title" content="Mestre Pastoral" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=6" />
 </head>
 <body>
   <header class="topbar">
@@ -25,6 +25,8 @@
       </div>
     </div>
     <div class="top-actions">
+      <button id="topOfertaBtn" class="btn-oferta-top" type="button" title="Ajude famílias necessitadas e apoie esta obra">❤️ Oferta</button>
+      <button id="topFavsBtn" class="ghost" type="button" title="Versículos favoritos">⭐ Salvos</button>
       <button id="installApp" class="ghost" title="Instalar aplicativo no aparelho" hidden>📲 Instalar</button>
       <button id="newChat" class="ghost" title="Nova conversa" hidden>＋ Nova</button>
     </div>
@@ -95,6 +97,16 @@
           <p class="card-preview">Hinário completo com pesquisa rápida por número ou nome do hino e meditação pastoral nas letras.</p>
           <span class="card-link">Abrir Harpa Cristã ›</span>
         </div>
+      </div>
+
+      <!-- Banner de Ação Social / Oferta -->
+      <div class="oferta-banner" id="homeOfertaBanner">
+        <div class="oferta-banner-info">
+          <span class="oferta-badge">❤️ Ação Social &amp; Missão Digital</span>
+          <h3>Ajude Famílias Necessitadas com Cestas Básicas</h3>
+          <p>Sua oferta voluntária leva alimento à mesa de famílias carentes e ajuda no custeio para manter o Mestre Pastoral sempre ativo, gratuito e atualizado.</p>
+        </div>
+        <button type="button" id="homeOfertaBtn" class="btn-oferta-cta">💛 Quero Ofertar</button>
       </div>
 
       <!-- Trilhas de Pregação e Estudo -->
@@ -247,18 +259,154 @@
     <div id="favList" class="list scroll"></div>
   </section>
 
+  <!-- ============ OFERTA (AÇÃO SOCIAL E CUSTEIO) ============ -->
+  <section id="view-oferta" class="view" hidden>
+    <div class="home scroll">
+      <div class="hero-card oferta-hero">
+        <span class="hero-badge">❤️ Generosidade que Transforma Vidas</span>
+        <h2 id="ofertaTitle">Ajude Famílias e Mantenha Esta Obra no Ar</h2>
+        <p id="ofertaSubtitle" class="hero-sub">Sua oferta de amor transforma vidas através de cestas básicas para famílias necessitadas e mantém o Mestre Pastoral gratuito e ativo para todos.</p>
+        <div class="vod-box" style="margin-top:16px">
+          <blockquote class="vod-quote">“Cada um contribua segundo propôs no seu coração; não com tristeza, ou por necessidade; porque Deus ama ao que dá com alegria.”</blockquote>
+          <div class="vod-ref" style="margin-bottom:0">2 Coríntios 9:7</div>
+        </div>
+      </div>
+
+      <!-- Explicação de Destinação da Oferta -->
+      <div class="oferta-pillars">
+        <div class="pillar-card">
+          <div class="pillar-icon">🥖</div>
+          <div>
+            <h3>1. Cestas Básicas para Famílias</h3>
+            <p>Parte fundamental do valor arrecadado é destinada à compra de cestas básicas e alimentos para socorrer famílias em situação de vulnerabilidade.</p>
+          </div>
+        </div>
+        <div class="pillar-card">
+          <div class="pillar-icon">🌐</div>
+          <div>
+            <h3>2. Custeio e Manutenção do Site</h3>
+            <p>Ajuda a cobrir os custos de servidor, inteligência artificial e manutenção técnica para que o aplicativo continue 100% ativo, rápido e atualizado para toda a igreja.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quadro Principal de Oferta (PIX / Cartão / Link Nubank) -->
+      <div class="section-block oferta-pay-card">
+        <div id="ofertaRedirectNotice" class="redirect-notice" hidden>
+          Redirecionando você para a página segura de pagamento…
+        </div>
+
+        <h3 style="font-family:'Lora',serif;color:var(--brown);margin:0 0 6px;font-size:1.25rem">Faça sua Oferta com Segurança</h3>
+        <p id="ofertaGoalText" style="color:var(--muted);font-size:.88rem;margin:0 0 18px">Escolha abaixo como prefere ofertar (PIX, Cartão de Crédito ou Débito):</p>
+
+        <!-- Botão de Link de Pagamento (Nubank / Cartão / PIX) -->
+        <div id="ofertaLinkBox" class="oferta-method-box" hidden>
+          <div class="method-badge">💳 Cartão de Crédito, Débito ou PIX</div>
+          <p class="method-desc">Oferte qualquer valor pela página oficial de pagamento (<span id="ofertaBankLabel">Nubank / Pagamento</span>):</p>
+          <a id="ofertaLinkBtn" href="#" target="_blank" rel="noopener" class="btn-nubank">
+            💜 Ir para Página de Oferta (PIX / Cartão) ›
+          </a>
+        </div>
+
+        <!-- Caixa de Chave PIX Direta -->
+        <div id="ofertaPixBox" class="oferta-method-box" hidden>
+          <div class="method-badge" id="ofertaPixTypeLabel">💠 Chave PIX Direta</div>
+          <div class="pix-details">
+            <div><strong>Banco / Instituição:</strong> <span id="ofertaPixBank">Nubank</span></div>
+            <div id="ofertaHolderRow" hidden><strong>Recebedor:</strong> <span id="ofertaPixHolder"></span></div>
+          </div>
+          <div class="pix-key-row">
+            <code id="ofertaPixKeyDisplay" class="pix-code"></code>
+            <button type="button" id="copyPixKeyBtn" class="btn-primary">📋 Copiar Chave PIX</button>
+          </div>
+        </div>
+
+        <!-- Aviso quando o ADM ainda não cadastrou a chave -->
+        <div id="ofertaEmptyBox" class="empty" style="padding:22px 10px">
+          Os dados bancários / PIX para oferta estão sendo configurados pelo administrador.<br>
+          <small>Se você é o administrador do aplicativo, clique em <strong>🔒 Área do ADM</strong> logo abaixo para cadastrar sua chave PIX ou link do Nubank.</small>
+        </div>
+      </div>
+
+      <!-- Rodapé discreto de Acesso do Administrador -->
+      <div class="adm-footer">
+        <button type="button" id="toggleAdmBtn" class="adm-trigger">🔒 Área do ADM (Configurar PIX / Link de Oferta)</button>
+      </div>
+
+      <!-- Painel Exclusivo do ADM (Protegido por Senha) -->
+      <div id="admPanel" class="section-block adm-panel" hidden>
+        <div class="section-head">
+          <div>
+            <h3>⚙️ Painel Exclusivo do Administrador (ADM)</h3>
+            <p>Configure aqui sua chave PIX e seu link de pagamento (Nubank / Cartão). Ao salvar, atualiza imediatamente para todos os usuários.</p>
+          </div>
+          <button type="button" id="closeAdmBtn" class="ghost">Fechar ✕</button>
+        </div>
+
+        <form id="admForm" class="adm-form">
+          <label>
+            <span>Link de Pagamento (Nubank / Cartão de Crédito / Débito / PIX)</span>
+            <input id="admPaymentLink" type="url" placeholder="Ex.: https://nubank.com.br/cobrar/... ou link do Mercado Pago / InfinitePay" />
+            <small>Crie um link de cobrança no app do Nubank (ou Mercado Pago/InfinitePay) e cole aqui.</small>
+          </label>
+
+          <label class="adm-check">
+            <input id="admAutoRedirect" type="checkbox" />
+            <span><strong>Redirecionar automaticamente</strong> para o link acima assim que a pessoa clicar em Oferta (após mostrar brevemente o propósito da oferta)</span>
+          </label>
+
+          <div class="adm-row">
+            <label>
+              <span>Chave PIX (CPF, E-mail, Telefone ou Aleatória)</span>
+              <input id="admPixKey" type="text" placeholder="Digite sua chave PIX..." />
+            </label>
+            <label>
+              <span>Banco / Plataforma</span>
+              <input id="admPixBank" type="text" placeholder="Ex.: Nubank" />
+            </label>
+          </div>
+
+          <div class="adm-row">
+            <label>
+              <span>Nome do Recebedor (para conferência no PIX)</span>
+              <input id="admPixHolder" type="text" placeholder="Seu nome ou nome do projeto social" />
+            </label>
+            <label>
+              <span>Tipo da Chave / Rótulo</span>
+              <input id="admPixType" type="text" placeholder="Ex.: Chave PIX (Nubank)" />
+            </label>
+          </div>
+
+          <label>
+            <span>Título da Página de Oferta</span>
+            <input id="admTitle" type="text" placeholder="Ajude Famílias e Mantenha Esta Obra no Ar" />
+          </label>
+
+          <label>
+            <span>Mensagem Explicativa (Cestas Básicas e Custeio do Site)</span>
+            <textarea id="admSubtitle" rows="2"></textarea>
+          </label>
+
+          <div class="adm-actions">
+            <button type="submit" class="btn-gold" style="padding:11px 22px;font-size:.92rem">💾 Salvar e Publicar Dados de Oferta</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
   <nav class="tabbar">
     <button class="tab" data-view="home"><span>🏠</span>Início</button>
     <button class="tab" data-view="bible"><span>📖</span>Bíblia</button>
     <button class="tab" data-view="harpa"><span>🎵</span>Harpa</button>
     <button class="tab" data-view="chat"><span>☕</span>Mestre</button>
     <button class="tab" data-view="search"><span>🔍</span>Buscar</button>
-    <button class="tab" data-view="favs"><span>⭐</span>Favoritos</button>
+    <button class="tab" data-view="oferta"><span>❤️</span>Oferta</button>
   </nav>
 
   <div id="toast" class="toast" hidden></div>
 
-  <script src="app.js"></script>
-  <script src="bible.js"></script>
+  <script src="app.js?v=6"></script>
+  <script src="bible.js?v=6"></script>
 </body>
 </html>
