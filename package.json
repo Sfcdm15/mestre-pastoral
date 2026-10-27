@@ -1,0 +1,16 @@
+{
+  "name": "mestre-pastoral",
+  "version": "1.0.0",
+  "description": "App de estudo bíblico e preparação de pregações com IA",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node scripts/test-bible.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["biblia", "estudo-biblico", "pregacao", "pastoral", "gemini", "ia"],
+  "author": "",
+  "license": "MIT"
+}

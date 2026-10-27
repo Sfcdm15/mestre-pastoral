@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#3b2a1a" />
+  <title>Mestre Pastoral — Estudo Bíblico e Pregação</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Mestre Pastoral" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand" id="brandHome" role="button" tabindex="0" title="Ir para o Início">
+      <img src="icon.svg" alt="" class="logo" />
+      <div>
+        <h1>Mestre Pastoral</h1>
+        <p>Gabinete de estudo bíblico e homilética</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="installApp" class="ghost" title="Instalar aplicativo no aparelho" hidden>📲 Instalar</button>
+      <button id="newChat" class="ghost" title="Nova conversa" hidden>＋ Nova</button>
+    </div>
+  </header>
+
+  <!-- ============ INÍCIO (HOME) ============ -->
+  <section id="view-home" class="view">
+    <div class="home scroll">
+      <!-- Hero / Saudação + Palavra do Dia -->
+      <div class="hero-card">
+        <div class="hero-top">
+          <div>
+            <span id="homeDate" class="hero-badge">Hoje</span>
+            <h2 id="homeGreeting">Graça e paz do Senhor!</h2>
+            <p class="hero-sub">Seu gabinete pastoral para meditar nas Escrituras e preparar mensagens que edificam a igreja.</p>
+          </div>
+          <button id="shuffleVerse" class="icon-pill" title="Sortear outro versículo">🔄 Outro versículo</button>
+        </div>
+
+        <div class="vod-box">
+          <div class="vod-label">✨ Palavra de Meditação</div>
+          <blockquote id="vodText" class="vod-quote">“Lâmpada para os meus pés é a tua palavra, e luz para o meu caminho.”</blockquote>
+          <div id="vodRef" class="vod-ref">Salmos 119:105</div>
+          <div class="vod-actions">
+            <button id="vodRead" class="btn-light">📖 Ler capítulo</button>
+            <button id="vodExplain" class="btn-light">💬 Explicar versículo</button>
+            <button id="vodSermon" class="btn-gold">📝 Criar esboço</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Busca / Comando Rápido -->
+      <form id="homeQuickForm" class="quick-bar">
+        <span class="quick-icon">☕</span>
+        <input id="homeQuickInput" type="text" placeholder="Peça um estudo (ex.: João 4, Fé) ou tire uma dúvida bíblica…" autocomplete="off" />
+        <button type="submit" class="btn-primary">Consultar Mestre</button>
+      </form>
+
+      <!-- Cartões de Acesso Rápido (Continuar leitura + Modos) -->
+      <div class="dash-grid">
+        <div class="dash-card continue-card" id="homeContinueCard">
+          <div class="card-tag">📖 Continuar Leitura</div>
+          <h3 id="homeContinueRef">João 3</h3>
+          <p id="homeContinuePreview" class="card-preview">E havia um homem dos fariseus, cujo nome era Nicodemos…</p>
+          <div class="card-row">
+            <button id="homeContinueBtn" class="btn-outline">Abrir leitura ›</button>
+            <button id="homeContinueStudy" class="btn-ghost-gold">☕ Estudar capítulo</button>
+          </div>
+        </div>
+
+        <div class="dash-card action-card" id="homeGoStudy">
+          <div class="card-tag">📝 Fluxo 1 · Homilética</div>
+          <h3>Preparar Pregação</h3>
+          <p class="card-preview">Resumo da mensagem, contexto histórico-cultural e esboço completo com 3 tópicos e aplicação prática.</p>
+          <span class="card-link">Abrir Módulo de Estudo ›</span>
+        </div>
+
+        <div class="dash-card action-card" id="homeGoDoubt">
+          <div class="card-tag">💡 Fluxo 2 · Exegese</div>
+          <h3>Explicar Versículo</h3>
+          <p class="card-preview">Tradução humana de termos difíceis, contexto imediato do trecho e dica pastoral de como pregar.</p>
+          <span class="card-link">Abrir Mini-Chat de Dúvidas ›</span>
+        </div>
+      </div>
+
+      <!-- Trilhas de Pregação e Estudo -->
+      <div class="section-block">
+        <div class="section-head">
+          <div>
+            <h3>🔥 Temas Prontos para Estudo e Pregação</h3>
+            <p>Toque em um tema para o Mestre Pastoral preparar o estudo e o esboço completo</p>
+          </div>
+          <div class="filter-pills" id="themeFilter">
+            <button class="pill active" data-cat="pregacao">Pregações</button>
+            <button class="pill" data-cat="personagens">Personagens</button>
+            <button class="pill" data-cat="pastoral">Aconselhamento</button>
+          </div>
+        </div>
+        <div id="themeGrid" class="theme-grid"></div>
+      </div>
+
+      <!-- Panorama Bíblico Interativo -->
+      <div class="section-block">
+        <div class="section-head">
+          <div>
+            <h3>📚 Explorar a Bíblia por Divisão</h3>
+            <p>66 livros · Antigo e Novo Testamento na versão Bíblia Livre (BLIVRE)</p>
+          </div>
+          <div class="filter-pills" id="divisionFilter">
+            <button class="pill active" data-div="pentateuco">Pentateuco</button>
+            <button class="pill" data-div="historicos">Históricos</button>
+            <button class="pill" data-div="poeticos">Poéticos</button>
+            <button class="pill" data-div="profetas">Profetas</button>
+            <button class="pill" data-div="evangelhos">Evangelhos e Atos</button>
+            <button class="pill" data-div="cartas">Cartas e Apocalipse</button>
+          </div>
+        </div>
+        <div id="divisionBooks" class="books-strip"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BÍBLIA ============ -->
+  <section id="view-bible" class="view" hidden>
+    <div class="reader-bar">
+      <button id="prevCh" class="icon-btn" aria-label="Capítulo anterior">‹</button>
+      <button id="openPicker" class="picker-btn"><span id="curRef">Carregando…</span> ▾</button>
+      <button id="nextCh" class="icon-btn" aria-label="Próximo capítulo">›</button>
+      <button id="studyCh" class="study-btn" title="Gerar estudo e esboço deste capítulo">☕ Estudar</button>
+    </div>
+    <div id="reader" class="reader scroll">
+      <div class="loading">Abrindo as Escrituras…</div>
+    </div>
+    <div id="selBar" class="sel-bar" hidden>
+      <span id="selInfo"></span>
+      <div class="sel-actions">
+        <button id="selExplain">💬 Me explica</button>
+        <button id="selFav">⭐ Favoritar</button>
+        <button id="selCopy">📋 Copiar</button>
+        <button id="selClear" aria-label="Limpar seleção">✕</button>
+      </div>
+    </div>
+
+    <div id="picker" class="picker" hidden>
+      <div class="picker-head">
+        <button id="pickerBack" class="icon-btn" hidden>‹</button>
+        <h3 id="pickerTitle">Escolha o livro</h3>
+        <button id="pickerClose" class="icon-btn" aria-label="Fechar">✕</button>
+      </div>
+      <div id="pickerTabs" class="seg">
+        <button class="seg-btn active" data-t="AT">Antigo Testamento</button>
+        <button class="seg-btn" data-t="NT">Novo Testamento</button>
+      </div>
+      <div id="pickerGrid" class="picker-grid scroll"></div>
+    </div>
+  </section>
+
+  <!-- ============ MESTRE (CHAT) ============ -->
+  <section id="view-chat" class="view" hidden>
+    <nav class="modes" role="tablist">
+      <button class="mode active" data-mode="estudo" role="tab">📖 Módulo de Estudo</button>
+      <button class="mode" data-mode="duvida" role="tab">💬 Tirar Dúvida</button>
+    </nav>
+
+    <main id="chat" class="chat scroll">
+      <section id="welcome" class="welcome">
+        <div class="cup">☕</div>
+        <h2>Que a paz do Senhor esteja com você!</h2>
+        <p id="welcomeText"></p>
+        <div id="suggestions" class="suggestions"></div>
+      </section>
+    </main>
+
+    <form id="composer" class="composer">
+      <textarea id="input" rows="1" placeholder="" autocomplete="off"></textarea>
+      <button id="send" type="submit" aria-label="Enviar">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M3.4 20.4 21 12 3.4 3.6l-.01 6.53L15 12 3.39 13.87z"/></svg>
+      </button>
+    </form>
+    <p class="disclaimer">Confira sempre as referências na sua Bíblia, como os bereanos (At 17.11).</p>
+  </section>
+
+  <!-- ============ BUSCAR ============ -->
+  <section id="view-search" class="view" hidden>
+    <form id="searchForm" class="search-bar">
+      <input id="searchInput" type="search" placeholder="Buscar palavra, frase ou referência (ex.: Jo 3:16)" autocomplete="off" />
+      <select id="searchScope" aria-label="Onde buscar">
+        <option value="ALL">Toda a Bíblia</option>
+        <option value="AT">Antigo Testamento</option>
+        <option value="NT">Novo Testamento</option>
+      </select>
+    </form>
+    <div id="searchResults" class="list scroll">
+      <p class="empty">Digite pelo menos 3 letras para buscar em toda a Bíblia.</p>
+    </div>
+  </section>
+
+  <!-- ============ FAVORITOS ============ -->
+  <section id="view-favs" class="view" hidden>
+    <div id="favList" class="list scroll"></div>
+  </section>
+
+  <nav class="tabbar">
+    <button class="tab" data-view="home"><span>🏠</span>Início</button>
+    <button class="tab" data-view="bible"><span>📖</span>Bíblia</button>
+    <button class="tab" data-view="chat"><span>☕</span>Mestre</button>
+    <button class="tab" data-view="search"><span>🔍</span>Buscar</button>
+    <button class="tab" data-view="favs"><span>⭐</span>Favoritos</button>
+  </nav>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="app.js"></script>
+  <script src="bible.js"></script>
+</body>
+</html>
