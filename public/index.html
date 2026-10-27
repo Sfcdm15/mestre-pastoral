@@ -88,6 +88,13 @@
           <p class="card-preview">Tradução humana de termos difíceis, contexto imediato do trecho e dica pastoral de como pregar.</p>
           <span class="card-link">Abrir Mini-Chat de Dúvidas ›</span>
         </div>
+
+        <div class="dash-card action-card" id="homeGoHarpa">
+          <div class="card-tag">🎵 Louvor · 524 Hinos</div>
+          <h3>Harpa Cristã</h3>
+          <p class="card-preview">Hinário completo com pesquisa rápida por número ou nome do hino e meditação pastoral nas letras.</p>
+          <span class="card-link">Abrir Harpa Cristã ›</span>
+        </div>
       </div>
 
       <!-- Trilhas de Pregação e Estudo -->
@@ -162,6 +169,39 @@
     </div>
   </section>
 
+  <!-- ============ HARPA CRISTÃ ============ -->
+  <section id="view-harpa" class="view" hidden>
+    <div id="harpaIndexView" class="harpa-container">
+      <form id="harpaSearchForm" class="harpa-search-bar">
+        <input id="harpaSearchInput" type="search" placeholder="Digite o número (ex.: 39) ou nome do hino (ex.: Chuvas de Graça)…" autocomplete="off" />
+        <button type="submit" class="btn-primary">🔍 Pesquisar</button>
+      </form>
+      <div id="harpaFilters" class="harpa-filters">
+        <button type="button" class="pill active" data-range="ALL">Todos (524)</button>
+        <button type="button" class="pill" data-range="1-100">1–100</button>
+        <button type="button" class="pill" data-range="101-200">101–200</button>
+        <button type="button" class="pill" data-range="201-300">201–300</button>
+        <button type="button" class="pill" data-range="301-400">301–400</button>
+        <button type="button" class="pill" data-range="401-524">401–524</button>
+        <button type="button" class="pill" data-range="FAV">⭐ Favoritos</button>
+      </div>
+      <div id="harpaList" class="harpa-list scroll">
+        <div class="loading">Carregando a Harpa Cristã…</div>
+      </div>
+    </div>
+
+    <div id="harpaReaderView" class="harpa-container" hidden>
+      <div class="reader-bar">
+        <button id="harpaBackBtn" class="ghost" type="button">‹ Índice / Pesquisa</button>
+        <div style="flex:1"></div>
+        <button id="harpaPrevBtn" class="icon-btn" type="button" aria-label="Hino anterior">‹</button>
+        <button id="harpaNextBtn" class="icon-btn" type="button" aria-label="Próximo hino">›</button>
+        <button id="harpaStudyBtn" class="study-btn" type="button" title="Meditar neste hino com o Mestre Pastoral">☕ Meditar</button>
+      </div>
+      <div id="harpaReader" class="reader scroll"></div>
+    </div>
+  </section>
+
   <!-- ============ MESTRE (CHAT) ============ -->
   <section id="view-chat" class="view" hidden>
     <nav class="modes" role="tablist">
@@ -210,6 +250,7 @@
   <nav class="tabbar">
     <button class="tab" data-view="home"><span>🏠</span>Início</button>
     <button class="tab" data-view="bible"><span>📖</span>Bíblia</button>
+    <button class="tab" data-view="harpa"><span>🎵</span>Harpa</button>
     <button class="tab" data-view="chat"><span>☕</span>Mestre</button>
     <button class="tab" data-view="search"><span>🔍</span>Buscar</button>
     <button class="tab" data-view="favs"><span>⭐</span>Favoritos</button>

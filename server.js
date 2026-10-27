@@ -19,11 +19,13 @@ const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
 const SYSTEM_PROMPT = fs.readFileSync(path.join(__dirname, "prompt.md"), "utf8");
 const PUBLIC_DIR = path.join(__dirname, "public");
 
-// Descompacta blivre.json automaticamente se apenas o .gz tiver sido enviado ao servidor
-const bibleJsonPath = path.join(PUBLIC_DIR, "bible", "blivre.json");
-const bibleGzPath = bibleJsonPath + ".gz";
-if (!fs.existsSync(bibleJsonPath) && fs.existsSync(bibleGzPath)) {
-  fs.writeFileSync(bibleJsonPath, require("zlib").gunzipSync(fs.readFileSync(bibleGzPath)));
+// Descompacta blivre.json e harpa.json automaticamente se apenas o .gz tiver sido enviado ao servidor
+for (const name of ["blivre.json", "harpa.json"]) {
+  const jsonPath = path.join(PUBLIC_DIR, "bible", name);
+  const gzPath = jsonPath + ".gz";
+  if (!fs.existsSync(jsonPath) && fs.existsSync(gzPath)) {
+    fs.writeFileSync(jsonPath, require("zlib").gunzipSync(fs.readFileSync(gzPath)));
+  }
 }
 
 const MODE_HINTS = {

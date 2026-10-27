@@ -65,7 +65,7 @@ async function copyText(text) {
 }
 
 // ---------- Navegação entre abas ----------
-const VIEWS = ["home", "bible", "chat", "search", "favs"];
+const VIEWS = ["home", "bible", "harpa", "chat", "search", "favs"];
 const viewHooks = {}; // bible.js registra callbacks ao entrar em cada aba
 function setView(name) {
   if (!VIEWS.includes(name)) name = "home";

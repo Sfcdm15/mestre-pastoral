@@ -1,6 +1,6 @@
 // Service Worker — Mestre Pastoral
 // Estratégia: cache-first para a Bíblia; network-first (com fallback offline) para a interface
-const CACHE_NAME = "mestre-pastoral-v3";
+const CACHE_NAME = "mestre-pastoral-v4";
 
 const ASSETS_TO_CACHE = [
   "/",
@@ -13,6 +13,7 @@ const ASSETS_TO_CACHE = [
   "/icon-512.png",
   "/manifest.webmanifest",
   "/bible/blivre.json",
+  "/bible/harpa.json",
 ];
 
 self.addEventListener("install", (event) => {

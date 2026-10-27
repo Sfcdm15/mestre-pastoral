@@ -56,7 +56,7 @@ button { font: inherit; }
 
 /* ---------- Barra de abas ---------- */
 .tabbar {
-  flex: none; display: grid; grid-template-columns: repeat(5, 1fr);
+  flex: none; display: grid; grid-template-columns: repeat(6, 1fr);
   border-top: 1px solid var(--line); background: var(--paper);
   padding-bottom: env(safe-area-inset-bottom);
   box-shadow: 0 -4px 18px rgba(59, 42, 26, 0.05);
@@ -172,7 +172,7 @@ button { font: inherit; }
 
 /* Cartões de Acesso Rápido */
 .dash-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(205px, 1fr)); gap: 14px;
 }
 .dash-card {
   background: var(--paper); border: 1px solid var(--line); border-radius: 20px;
@@ -351,6 +351,73 @@ button { font: inherit; }
 .picker-grid button small { display: block; color: var(--muted); font-size: .72rem; margin-top: 2px; }
 .picker-grid button.current { border-color: var(--gold); background: var(--gold-soft); }
 .picker-grid button:hover { border-color: var(--gold); }
+
+/* ---------- Harpa Cristã ---------- */
+.harpa-container {
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
+}
+.harpa-search-bar {
+  flex: none; display: flex; align-items: center; gap: 8px;
+  margin: 12px 14px 8px; padding: 6px 6px 6px 16px;
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+}
+.harpa-search-bar:focus-within { border-color: var(--gold); }
+.harpa-search-bar input {
+  flex: 1; min-width: 0; border: 0; outline: 0; background: transparent;
+  font: inherit; font-size: .95rem; color: var(--ink); padding: 7px 0;
+}
+.harpa-filters {
+  flex: none; display: flex; gap: 6px; overflow-x: auto; padding: 2px 14px 10px;
+  scrollbar-width: none;
+}
+.harpa-filters::-webkit-scrollbar { display: none; }
+.harpa-filters .pill { white-space: nowrap; }
+.harpa-list { padding: 4px 14px 28px; }
+.harpa-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px;
+}
+.harpa-card {
+  border: 1px solid var(--line); background: var(--paper); border-radius: 14px;
+  padding: 12px 14px; cursor: pointer; text-align: left; display: flex; align-items: center;
+  gap: 12px; transition: all .15s; box-shadow: var(--shadow-sm);
+}
+.harpa-card:hover { border-color: var(--gold); background: #fffaf0; transform: translateY(-2px); }
+.harpa-num {
+  width: 44px; height: 44px; flex: none; border-radius: 12px;
+  background: var(--gold-soft); color: var(--brown); font-family: "Lora", serif;
+  font-weight: 700; font-size: .96rem; display: grid; place-items: center;
+}
+.harpa-info { flex: 1; min-width: 0; }
+.harpa-title {
+  font-weight: 600; color: var(--brown); font-size: .93rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.harpa-snip {
+  font-size: .79rem; color: var(--muted); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.harpa-star { color: var(--gold); font-size: 1rem; flex: none; }
+
+.hymn-stanza {
+  font-family: "Lora", serif; font-size: 1.12rem; line-height: 1.8;
+  margin: 16px auto; max-width: 560px; white-space: pre-line;
+}
+.hymn-chorus {
+  font-family: "Lora", serif; font-size: 1.06rem; line-height: 1.75; font-style: italic;
+  margin: 16px auto; max-width: 560px; padding: 14px 18px;
+  border-left: 3px solid var(--gold); background: #fbf3e2; border-radius: 0 14px 14px 0;
+  white-space: pre-line; color: var(--brown); font-weight: 500;
+}
+.hymn-chorus-tag {
+  display: block; font-family: "Inter", sans-serif; font-style: normal;
+  font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--gold); margin-bottom: 4px;
+}
+.hymn-actions {
+  display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+  margin: 24px auto 10px; max-width: 560px;
+}
 
 /* ---------- Busca e favoritos ---------- */
 .search-bar { flex: none; display: flex; gap: 8px; padding: 12px 14px 10px; }

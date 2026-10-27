@@ -609,6 +609,11 @@ function initHomeEvents() {
     setMode("duvida");
     setTimeout(() => $("#input").focus(), 60);
   };
+  $("#homeGoHarpa").onclick = () => {
+    setView("harpa");
+    showHarpaIndex();
+    setTimeout(() => $("#harpaSearchInput").focus(), 60);
+  };
   $("#themeFilter").addEventListener("click", (e) => {
     const b = e.target.closest("[data-cat]");
     if (!b) return;
@@ -648,13 +653,242 @@ function initHomeEvents() {
   });
 }
 
+// ---------- Harpa Cristã (524 Hinos + Pesquisa por Número ou Nome) ----------
+const HARPA_FAV_KEY = "mestre-pastoral:harpa-favs";
+let HARPA = null; // [{ n, title, lyrics, normTitle, normLyrics, firstLine }]
+let harpaFavs = loadJSON(HARPA_FAV_KEY, []); // [n, ...]
+let curHarpaRange = "ALL";
+let curHymnNum = 1;
+const saveHarpaFavs = () => localStorage.setItem(HARPA_FAV_KEY, JSON.stringify(harpaFavs));
+
+function isChorusStanza(stanza) {
+  if (/^\d{1,2}[\s.]/.test(stanza.trim())) return false;
+  const letters = stanza.replace(/[^a-zA-ZÀ-ÿ]/g, "");
+  if (letters.length < 10) return false;
+  const upper = letters.replace(/[^A-ZÀ-Ý]/g, "").length;
+  return upper / letters.length > 0.75;
+}
+
+function showHarpaIndex() {
+  $("#harpaIndexView").hidden = false;
+  $("#harpaReaderView").hidden = true;
+  renderHarpaList();
+}
+
+function renderHarpaList(submitTriggered = false) {
+  const listEl = $("#harpaList");
+  if (!HARPA) {
+    listEl.innerHTML = `<div class="loading">Carregando os 524 hinos da Harpa Cristã…</div>`;
+    return;
+  }
+
+  const rawQ = ($("#harpaSearchInput").value || "").trim();
+  const numMatch = rawQ.match(/^(?:hino\s*|n[º°]?\s*|#)?(\d{1,3})$/i);
+  const exactNum = numMatch ? Number(numMatch[1]) : null;
+
+  // Se o usuário digitou um número exato e clicou em "Pesquisar" (Enter), abre o hino direto!
+  if (submitTriggered && exactNum && exactNum >= 1 && exactNum <= HARPA.length) {
+    openHymn(exactNum);
+    return;
+  }
+
+  const nq = norm(rawQ);
+  const favSet = new Set(harpaFavs);
+  let filtered = HARPA;
+
+  if (rawQ) {
+    if (exactNum) {
+      // Prioriza o hino de número exato, seguido pelos que contêm esses dígitos no número
+      const exact = HARPA.filter((h) => h.n === exactNum);
+      const partial = HARPA.filter((h) => h.n !== exactNum && String(h.n).includes(String(exactNum)));
+      filtered = [...exact, ...partial];
+    } else {
+      // Pesquisa por nome do hino (prioridade) ou trecho da letra
+      const byTitle = [];
+      const byLyrics = [];
+      for (const h of HARPA) {
+        if (String(h.n) === rawQ || h.normTitle.includes(nq)) byTitle.push(h);
+        else if (nq.length >= 2 && h.normLyrics.includes(nq)) byLyrics.push(h);
+      }
+      filtered = [...byTitle, ...byLyrics];
+    }
+  } else if (curHarpaRange === "FAV") {
+    filtered = HARPA.filter((h) => favSet.has(h.n));
+  } else if (curHarpaRange !== "ALL") {
+    const [min, max] = curHarpaRange.split("-").map(Number);
+    filtered = HARPA.filter((h) => h.n >= min && h.n <= max);
+  }
+
+  if (!filtered.length) {
+    listEl.innerHTML =
+      curHarpaRange === "FAV" && !rawQ
+        ? `<p class="empty">Você ainda não favoritou nenhum hino.<br>Abra um hino e toque em ⭐ Favoritar.</p>`
+        : `<p class="empty">Nenhum hino encontrado para “${escapeHtml(rawQ)}”.<br>Tente buscar pelo número (1 a 524) ou por palavras do título.</p>`;
+    return;
+  }
+
+  let html = "";
+  if (exactNum && exactNum >= 1 && exactNum <= HARPA.length) {
+    const target = HARPA.find((h) => h.n === exactNum);
+    if (target) {
+      html += `<button type="button" class="goto" data-hymn="${target.n}">🎵 Abrir Hino ${target.n} — ${escapeHtml(target.title)}</button>`;
+    }
+  }
+
+  html += `<p class="count">${filtered.length} hino(s) ${rawQ ? `encontrado(s) para “${escapeHtml(rawQ)}”` : "na lista"}</p><div class="harpa-grid">`;
+  for (const h of filtered) {
+    const titleHtml = nq && !exactNum && h.normTitle.includes(nq) ? highlight(h.title, h.normTitle, nq) : escapeHtml(h.title);
+    const star = favSet.has(h.n) ? `<span class="harpa-star" title="Favorito">★</span>` : "";
+    html += `<button type="button" class="harpa-card" data-hymn="${h.n}">
+      <div class="harpa-num">${h.n}</div>
+      <div class="harpa-info">
+        <div class="harpa-title">${titleHtml}</div>
+        <div class="harpa-snip">${escapeHtml(h.firstLine)}</div>
+      </div>
+      ${star}
+    </button>`;
+  }
+  html += `</div>`;
+  listEl.innerHTML = html;
+  listEl.scrollTop = 0;
+}
+
+function openHymn(n) {
+  if (!HARPA) return;
+  const h = HARPA.find((x) => x.n === n);
+  if (!h) return;
+  curHymnNum = h.n;
+  setView("harpa");
+  $("#harpaIndexView").hidden = true;
+  $("#harpaReaderView").hidden = false;
+
+  $("#harpaPrevBtn").disabled = h.n <= 1;
+  $("#harpaNextBtn").disabled = h.n >= HARPA.length;
+
+  const isFav = harpaFavs.includes(h.n);
+  const stanzas = h.lyrics.split(/\n\n+/);
+  const bodyHtml = stanzas
+    .map((st) => {
+      if (isChorusStanza(st)) {
+        return `<div class="hymn-chorus"><span class="hymn-chorus-tag">🎶 Coro</span>${escapeHtml(st)}</div>`;
+      }
+      return `<p class="hymn-stanza">${escapeHtml(st)}</p>`;
+    })
+    .join("");
+
+  const reader = $("#harpaReader");
+  reader.innerHTML = `
+    <h2>Hino ${h.n} · ${escapeHtml(h.title)}</h2>
+    <div class="testament">Harpa Cristã · Louvor Congregacional</div>
+    ${bodyHtml}
+    <div class="hymn-actions">
+      <button type="button" class="btn-outline" data-hact="meditate">☕ Meditar com o Mestre</button>
+      <button type="button" class="btn-ghost-gold" data-hact="fav">${isFav ? "★ Favoritado" : "⭐ Favoritar"}</button>
+      <button type="button" class="btn-ghost-gold" data-hact="copy">📋 Copiar letra</button>
+      <button type="button" class="btn-ghost-gold" data-hact="share">📤 Compartilhar</button>
+    </div>
+    <div class="chapter-nav">
+      <button type="button" data-hgo="-1" ${h.n <= 1 ? "hidden" : ""}>‹ Hino ${h.n - 1}</button>
+      <button type="button" data-hgo="1" ${h.n >= HARPA.length ? "hidden" : ""}>Hino ${h.n + 1} ›</button>
+    </div>
+  `;
+  reader.scrollTop = 0;
+}
+
+function initHarpaEvents() {
+  let timer;
+  $("#harpaSearchForm").onsubmit = (e) => {
+    e.preventDefault();
+    clearTimeout(timer);
+    renderHarpaList(true);
+  };
+  $("#harpaSearchInput").oninput = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => renderHarpaList(false), 180);
+  };
+  $("#harpaFilters").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-range]");
+    if (!b) return;
+    curHarpaRange = b.dataset.range;
+    $("#harpaSearchInput").value = "";
+    document.querySelectorAll("#harpaFilters .pill").forEach((p) => p.classList.toggle("active", p === b));
+    renderHarpaList(false);
+  });
+  $("#harpaList").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-hymn]");
+    if (!btn) return;
+    openHymn(Number(btn.dataset.hymn));
+  });
+  $("#harpaBackBtn").onclick = showHarpaIndex;
+  $("#harpaPrevBtn").onclick = () => openHymn(curHymnNum - 1);
+  $("#harpaNextBtn").onclick = () => openHymn(curHymnNum + 1);
+  $("#harpaStudyBtn").onclick = () => {
+    const h = HARPA?.find((x) => x.n === curHymnNum);
+    if (!h) return;
+    askMaster(
+      `Medite comigo no Hino ${h.n} da Harpa Cristã (${h.title}) e me mostre como usar sua mensagem em uma pregação.`,
+      "estudo",
+      { ref: `Harpa Cristã — Hino ${h.n}: ${h.title}`, text: h.lyrics }
+    );
+  };
+  $("#harpaReader").addEventListener("click", (e) => {
+    const go = e.target.closest("[data-hgo]");
+    if (go) return openHymn(curHymnNum + Number(go.dataset.hgo));
+    const act = e.target.closest("[data-hact]")?.dataset.hact;
+    if (!act) return;
+    const h = HARPA?.find((x) => x.n === curHymnNum);
+    if (!h) return;
+    const fullText = `Hino ${h.n} — ${h.title} (Harpa Cristã)\n\n${h.lyrics}`;
+    if (act === "meditate") {
+      $("#harpaStudyBtn").click();
+    } else if (act === "copy") {
+      copyText(fullText);
+    } else if (act === "share") {
+      if (navigator.share) navigator.share({ title: `Hino ${h.n} - ${h.title}`, text: fullText }).catch(() => {});
+      else window.open("https://wa.me/?text=" + encodeURIComponent(fullText), "_blank");
+    } else if (act === "fav") {
+      if (harpaFavs.includes(h.n)) {
+        harpaFavs = harpaFavs.filter((x) => x !== h.n);
+        toast("Removido dos favoritos da Harpa");
+      } else {
+        harpaFavs = [h.n, ...harpaFavs];
+        toast("Salvo nos favoritos da Harpa ⭐");
+      }
+      saveHarpaFavs();
+      openHymn(h.n);
+    }
+  });
+}
+
+async function loadHarpa() {
+  try {
+    const res = await fetch("bible/harpa.json");
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    HARPA = data.hymns.map((h) => {
+      const firstLine = (h.lyrics.split(/\r?\n/)[0] || "").replace(/^\d{1,2}[\s.]+/, "");
+      return {
+        ...h,
+        firstLine,
+        normTitle: norm(h.title),
+        normLyrics: norm(h.lyrics),
+      };
+    });
+    renderHarpaList(false);
+  } catch (err) {
+    $("#harpaList").innerHTML = `<p class="empty">Não foi possível carregar a Harpa Cristã (${escapeHtml(err.message)}).</p>`;
+  }
+}
+
 // ---------- Inicialização ----------
 viewHooks.home = updateHome;
 viewHooks.favs = renderFavs;
 viewHooks.search = () => setTimeout(() => searchInput.focus(), 50);
 viewHooks.bible = () => { if (BIBLE && !readerEl.querySelector(".verse")) renderReader(); };
+viewHooks.harpa = () => { if (HARPA && !$("#harpaList").querySelector(".harpa-card") && $("#harpaReaderView").hidden) renderHarpaList(false); };
 
 initHomeEvents();
+initHarpaEvents();
 updateHome();
 
 async function loadBible() {
@@ -678,3 +912,4 @@ async function loadBible() {
 
 setView(location.hash.slice(1) || "home");
 loadBible();
+loadHarpa();
