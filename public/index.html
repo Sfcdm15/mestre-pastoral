@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-title" content="Mestre Pastoral" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=8" />
+  <link rel="stylesheet" href="style.css?v=9" />
 </head>
 <body>
   <header class="topbar">
@@ -212,13 +212,33 @@
 
     <div id="harpaReaderView" class="harpa-container" hidden>
       <div class="reader-bar">
-        <button id="harpaBackBtn" class="ghost" type="button">‹ Índice / Pesquisa</button>
+        <button id="harpaBackBtn" class="ghost" type="button">‹ Índice</button>
+        <div class="hymn-mode-pill" role="tablist">
+          <button type="button" class="hmode-btn active" id="btnHymnLyrics" title="Ver letra do hino">📖 Letra</button>
+          <button type="button" class="hmode-btn" id="btnHymnCifra" title="Ver hino com cifras para violão e teclado">🎸 Cifra</button>
+        </div>
         <div style="flex:1"></div>
         <button id="harpaPrevBtn" class="icon-btn" type="button" aria-label="Hino anterior">‹</button>
         <button id="harpaNextBtn" class="icon-btn" type="button" aria-label="Próximo hino">›</button>
         <button id="harpaStudyBtn" class="study-btn" type="button" title="Meditar neste hino com o Mestre Pastoral">☕ Meditar</button>
       </div>
       <div id="harpaReader" class="reader scroll"></div>
+
+      <!-- Modal de edição de cifra -->
+      <div id="cifraEditModal" class="modal-backdrop" hidden>
+        <div class="modal-card">
+          <div class="modal-head">
+            <h3 id="cifraEditTitle">Editar Cifra do Hino</h3>
+            <button type="button" class="ghost" id="cifraEditClose">✕</button>
+          </div>
+          <p class="modal-desc">Edite os acordes ou cole sua versão para este hino (salvo no seu aparelho):</p>
+          <textarea id="cifraEditText" class="cifra-editor-area" rows="12" spellcheck="false" placeholder="[Tom: G]&#10;&#10;      G                D&#10;1. Tu na maldição da cruz..."></textarea>
+          <div class="modal-foot">
+            <button type="button" class="ghost" id="cifraEditCancel">Cancelar</button>
+            <button type="button" class="btn-gold" id="cifraEditSave">💾 Salvar Cifra</button>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -414,7 +434,7 @@
 
   <div id="toast" class="toast" hidden></div>
 
-  <script src="app.js?v=8"></script>
-  <script src="bible.js?v=8"></script>
+  <script src="app.js?v=9"></script>
+  <script src="bible.js?v=9"></script>
 </body>
 </html>

@@ -44,6 +44,7 @@ for (const name of ["blivre.json", "harpa.json"]) {
 const MODE_HINTS = {
   estudo: "[O usuário escolheu o MÓDULO DE ESTUDO — use o FLUXO 1]\n",
   duvida: "[O usuário escolheu o MINI-CHAT DE DÚVIDAS — use o FLUXO 2]\n",
+  cifra: "[O usuário solicitou a CIFRA MUSICAL deste hino da Harpa Cristã — use o FLUXO 3: informe o Tom, a Intro e a letra cifrada completa]\n",
 };
 
 const MIME = {

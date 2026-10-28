@@ -753,18 +753,339 @@ function renderHarpaList(submitTriggered = false) {
   listEl.scrollTop = 0;
 }
 
-function openHymn(n) {
-  if (!HARPA) return;
-  const h = HARPA.find((x) => x.n === n);
-  if (!h) return;
-  curHymnNum = h.n;
-  setView("harpa");
-  $("#harpaIndexView").hidden = true;
-  $("#harpaReaderView").hidden = false;
+const CIFRA_STORAGE_PREFIX = "mestre-pastoral:cifra:";
+let curHymnTab = "lyrics"; // 'lyrics' | 'cifra'
+let curCifraSemitones = 0;
+let curCifraFontSize = 15;
+let cifraAutoScrollTimer = null;
+let isCifraAutoScrolling = false;
 
-  $("#harpaPrevBtn").disabled = h.n <= 1;
-  $("#harpaNextBtn").disabled = h.n >= HARPA.length;
+const NOTES_SHARP = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const NOTES_FLAT  = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
 
+const BUILTIN_CIFRAS = {
+  1: `[Tom: G]
+
+[Intro: G  D  C  D  G]
+
+      G
+1. Deus prometeu com certeza
+                  D
+Chuvas de graça mandar;
+       G
+Ele nos dá fortaleza
+  C          D         G
+E ricas bênçãos sem par.
+
+[Coro]
+           D
+Chuvas de graça,
+  C        D      G
+Chuvas pedimos, Senhor!
+             C
+Manda-nos já chuvas mansas,
+ G         D       G
+Chuvas do Consolador!
+
+       G
+2. Cristo nos dá a promessa
+                   D
+Do santo fogo do além;
+         G
+Que o coração nos aqueça,
+     C         D       G
+Com bênçãos puras também.
+
+        G
+3. Dá-nos, Senhor, amplamente,
+                  D
+Tua divina unção;
+       G
+Manda a chuva celeste,
+  C          D        G
+Que traz avivamento ao chão.`,
+
+  6: `[Tom: G]
+
+[Intro: G  D  Em  C  G  D  G]
+
+      G                D
+1. Tu na maldição da cruz,
+      C         D    G
+Elevaste o Teu amor,
+                   D
+Em rogar, Senhor Jesus:
+        C       D       G
+"Pai, perdoa ao transgressor!"
+
+[Coro]
+ G
+Queres, queres, com vigor,
+       C          D
+Muitas almas despertar;
+ G
+Queres, queres, ó Senhor!
+       C         D   G
+Transformar, remir, curar;
+     C          G
+Oh! sim!   Oh! sim!
+        D            G
+Queres todos renovar!
+
+      G            D
+2. O Maligno tentador
+      C       D      G
+É o autor da perdição,
+                    D
+Do pecado, mal e a dor,
+      C       D     G
+Da doença e da aflição.
+
+        G              D
+3. Tu levaste, ó bom Jesus,
+      C       D      G
+O pecado, o mal e a dor,
+                   D
+E a doença sobre a cruz;
+      C        D     G
+És o grande Salvador!
+
+       G               D
+4. Deus é bom, quer sempre o bem
+       C    D     G
+Do oprimido pecador;
+                   D
+Mal nenhum em Si Deus tem:
+       C         D      G
+"Deus é luz, Deus é amor!"`,
+
+  15: `[Tom: E]
+
+[Intro: E  B7  A  B7  E]
+
+       E
+1. Oh! Quão cego andei e perdido vaguei,
+                           B7
+Longe, longe do meu Salvador!
+        E               A
+Mas da glória desceu e seu sangue verteu
+         E         B7       E
+Pra salvar um tão pobre pecador.
+
+[Coro]
+        E                      B7
+Foi na cruz, foi na cruz onde um dia eu vi
+       A        B7        E
+Meu pecado castigado em Jesus;
+        A                    E
+Foi ali pela fé que meus olhos abri,
+       E        B7          E
+E agora me alegro em sua luz!
+
+       E
+2. Eu ouvia falar dessa graça sem fim,
+                           B7
+Que do céu trouxe nosso Jesus;
+       E                 A
+Mas eu era rebelde, e dizia pra mim:
+       E       B7         E
+"Não desejo a morte da cruz".`,
+
+  187: `[Tom: G]
+
+[Intro: G  D  C  G  D  G]
+
+       G   C        G
+1. Mais perto quero estar,
+            D
+Meu Deus, de Ti!
+     G   C        G
+Inda que seja a dor
+    D      G
+Que me una a Ti,
+       C         G
+Sempre hei de suplicar:
+        G   C        G
+Mais perto quero estar,
+     D       G
+Mais perto, ó Deus, de Ti!`,
+
+  545: `[Tom: G]
+
+[Intro: G  C  G  D  G]
+
+      G           C
+1. Deus enviou seu Filho amado
+      G               D
+Para morrer no meu lugar;
+        G           C
+Na cruz pagou por meus pecados,
+        G     D          G
+Mas vivo está e vida eterna dá.
+
+[Coro]
+           G           C
+Porque Ele vive, posso crer no amanhã,
+           G           D
+Porque Ele vive, temor não há;
+         G            C
+Mas eu bem sei, eu sei, que a minha vida
+         G      D            G
+Está nas mãos do meu Jesus, que vivo está!`
+};
+
+function transposeNote(note, semitones) {
+  let idx = NOTES_SHARP.indexOf(note);
+  if (idx === -1) idx = NOTES_FLAT.indexOf(note);
+  if (idx === -1) return note;
+  let newIdx = (idx + semitones) % 12;
+  if (newIdx < 0) newIdx += 12;
+  return NOTES_SHARP[newIdx];
+}
+
+function transposeChord(chord, semitones) {
+  return chord.replace(/([A-G][#b]?)/g, (m) => transposeNote(m, semitones));
+}
+
+function transposeCifraText(rawText, semitones) {
+  if (!semitones) return rawText;
+  const lines = rawText.split(/\r?\n/);
+  const chordTokenRegex = /\b([A-G][#b]?(?:m|maj|min|dim|aug|sus[24]?|[2-9]|1[13])*(?:\/[A-G][#b]?)?)\b/g;
+
+  return lines
+    .map((line) => {
+      if (/^\[Tom:\s*([A-G][#b]?m?)\]/i.test(line.trim())) {
+        return line.replace(/(\b[A-G][#b]?m?\b)/g, (c) => transposeChord(c, semitones));
+      }
+      if (/^\[Intro:\s*(.+)\]/i.test(line.trim())) {
+        return line.replace(chordTokenRegex, (c) => transposeChord(c, semitones));
+      }
+      if (/^\[.*\]$/.test(line.trim())) return line;
+
+      const words = line.trim().split(/\s+/).filter(Boolean);
+      if (!words.length) return line;
+      const isChordWord = (w) => /^[A-G][#b]?(?:m|maj|min|dim|aug|sus[24]?|[2-9]|1[13])*(?:\/[A-G][#b]?)?$/.test(w);
+      const chordCount = words.filter(isChordWord).length;
+      if (chordCount >= words.length * 0.6) {
+        return line.replace(chordTokenRegex, (c) => transposeChord(c, semitones));
+      }
+      return line;
+    })
+    .join("\n");
+}
+
+function formatCifraHTML(cifraText) {
+  const lines = cifraText.split(/\r?\n/);
+  const chordTokenRegex = /\b([A-G][#b]?(?:m|maj|min|dim|aug|sus[24]?|[2-9]|1[13])*(?:\/[A-G][#b]?)?)\b/g;
+
+  return lines
+    .map((rawLine) => {
+      const line = escapeHtml(rawLine);
+      const trimmed = line.trim();
+      if (!trimmed) return "<br>";
+      if (/^\[(Tom|Intro|Coro|Estrofe|\d+).*\]$/i.test(trimmed)) {
+        return `<span class="chord-header">${line}</span>`;
+      }
+      const words = trimmed.split(/\s+/).filter(Boolean);
+      const isChordWord = (w) => /^[A-G][#b]?(?:m|maj|min|dim|aug|sus[24]?|[2-9]|1[13])*(?:\/[A-G][#b]?)?$/.test(w);
+      const chordCount = words.filter(isChordWord).length;
+      if (chordCount >= words.length * 0.6) {
+        const highlighted = line.replace(chordTokenRegex, '<span class="chord">$1</span>');
+        return `<div class="chord-line">${highlighted}</div>`;
+      }
+      return `<div class="lyrics-line">${line}</div>`;
+    })
+    .join("");
+}
+
+function extractCifraKey(rawText, semitones = 0) {
+  const m = rawText.match(/\[Tom:\s*([A-G][#b]?m?)\]/i) || rawText.match(/\b([A-G][#b]?m?)\b/);
+  const base = m ? m[1] : "G";
+  return transposeChord(base, semitones);
+}
+
+function toggleCifraAutoScroll() {
+  const reader = $("#harpaReader");
+  const btn = $("#btnAutoScroll");
+  if (isCifraAutoScrolling) {
+    clearInterval(cifraAutoScrollTimer);
+    isCifraAutoScrolling = false;
+    if (btn) {
+      btn.classList.remove("active");
+      btn.textContent = "▶ Rolar";
+    }
+  } else {
+    isCifraAutoScrolling = true;
+    if (btn) {
+      btn.classList.add("active");
+      btn.textContent = "⏸ Pausar";
+    }
+    cifraAutoScrollTimer = setInterval(() => {
+      if (!isCifraAutoScrolling || !reader) return;
+      reader.scrollTop += 1;
+      if (reader.scrollTop + reader.clientHeight >= reader.scrollHeight) {
+        toggleCifraAutoScroll();
+      }
+    }, 45);
+  }
+}
+
+async function generateCifraWithAI(h) {
+  const container = $("#cifraViewContainer");
+  if (container) {
+    container.innerHTML = `<div class="loading">🎼 O Mestre Pastoral está harmonizando o Hino ${h.n} para violão e teclado... Aguarde alguns instantes.</div>`;
+  }
+
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "cifra",
+        messages: [{
+          role: "user",
+          text: `Gere a cifra musical do Hino ${h.n} (${h.title}) da Harpa Cristã para violão e teclado em tom tradicional para a igreja (G, C ou D). Siga o FLUXO 3: [Tom: X], [Intro: ...] e as estrofes e coro com acordes alinhados.`
+        }],
+        context: { ref: `Harpa Cristã — Hino ${h.n}: ${h.title}`, text: h.lyrics }
+      })
+    });
+
+    if (!res.ok) throw new Error("Erro na geração (" + res.status + ")");
+
+    const decoder = new TextDecoder();
+    let result = "";
+    const readerStream = res.body.getReader();
+    while (true) {
+      const { done, value } = await readerStream.read();
+      if (done) break;
+      result += decoder.decode(value, { stream: true });
+      if (container) container.textContent = result;
+    }
+
+    if (result.trim()) {
+      localStorage.setItem(CIFRA_STORAGE_PREFIX + h.n, result.trim());
+      toast("Cifra gerada e salva com sucesso! 🎸");
+      curCifraSemitones = 0;
+      renderCifraView(h);
+    }
+  } catch (err) {
+    if (container) {
+      container.innerHTML = `<div class="empty">Não foi possível gerar a cifra (${escapeHtml(err.message)}).<br><br><button type="button" class="btn-gold" id="btnRetryGenCifra">Tentar novamente</button></div>`;
+      $("#btnRetryGenCifra")?.addEventListener("click", () => generateCifraWithAI(h));
+    }
+  }
+}
+
+function openCifraModal(h, text) {
+  const modal = $("#cifraEditModal");
+  if (!modal) return;
+  $("#cifraEditTitle").textContent = `Cifra: Hino ${h.n} · ${h.title}`;
+  $("#cifraEditText").value = text || `[Tom: G]\n\n[Intro: G  D  C  D  G]\n\n      G\n1. ...`;
+  modal.hidden = false;
+  $("#cifraEditText").focus();
+}
+
+function renderLyricsView(h) {
   const isFav = harpaFavs.includes(h.n);
   const stanzas = h.lyrics.split(/\n\n+/);
   const bodyHtml = stanzas
@@ -795,6 +1116,134 @@ function openHymn(n) {
   reader.scrollTop = 0;
 }
 
+function renderCifraView(h) {
+  const isFav = harpaFavs.includes(h.n);
+  const rawCifra = localStorage.getItem(CIFRA_STORAGE_PREFIX + h.n) || BUILTIN_CIFRAS[h.n];
+  const reader = $("#harpaReader");
+
+  if (!rawCifra) {
+    reader.innerHTML = `
+      <h2>Hino ${h.n} · ${escapeHtml(h.title)}</h2>
+      <div class="testament">Harpa Cristã · Louvor e Cifras</div>
+      <div class="cifra-empty-card">
+        <div class="cifra-empty-icon">🎸</div>
+        <h3>Cifra para Violão e Teclado</h3>
+        <p>Ainda não há cifra salva para este hino. Deseja que o Mestre Pastoral gere a harmonização completa agora?</p>
+        <div class="cifra-btn-row">
+          <button type="button" class="btn-gold" id="btnGenCifraWithAI">✨ Gerar Cifra com o Mestre</button>
+          <button type="button" class="btn-ghost-gold" id="btnOpenCifraEditor">✏️ Colar Minha Própria Cifra</button>
+        </div>
+      </div>
+      <div class="hymn-actions">
+        <button type="button" class="btn-outline" data-hact="meditate">☕ Meditar com o Mestre</button>
+        <button type="button" class="btn-ghost-gold" data-hact="fav">${isFav ? "★ Favoritado" : "⭐ Favoritar"}</button>
+      </div>
+      <div class="chapter-nav">
+        <button type="button" data-hgo="-1" ${h.n <= 1 ? "hidden" : ""}>‹ Hino ${h.n - 1}</button>
+        <button type="button" data-hgo="1" ${h.n >= HARPA.length ? "hidden" : ""}>Hino ${h.n + 1} ›</button>
+      </div>
+    `;
+    reader.scrollTop = 0;
+    $("#btnGenCifraWithAI")?.addEventListener("click", () => generateCifraWithAI(h));
+    $("#btnOpenCifraEditor")?.addEventListener("click", () => openCifraModal(h, ""));
+    return;
+  }
+
+  const currentKey = extractCifraKey(rawCifra, curCifraSemitones);
+  const transposed = transposeCifraText(rawCifra, curCifraSemitones);
+  const formattedHtml = formatCifraHTML(transposed);
+
+  reader.innerHTML = `
+    <h2>Hino ${h.n} · ${escapeHtml(h.title)}</h2>
+    <div class="testament">Harpa Cristã · Cifra Musical</div>
+
+    <div class="cifra-toolbar">
+      <div class="cifra-tool-group">
+        <button type="button" class="cifra-tool-btn" id="btnTransposeDown" title="Abaixar meio tom">◀ Tom</button>
+        <span class="cifra-key-pill" id="cifraKeyBadge">Tom: ${escapeHtml(currentKey)}</span>
+        <button type="button" class="cifra-tool-btn" id="btnTransposeUp" title="Aumentar meio tom">Tom ▶</button>
+      </div>
+      <div class="cifra-tool-group">
+        <button type="button" class="cifra-tool-btn" id="btnFontDown" title="Diminuir fonte">A-</button>
+        <button type="button" class="cifra-tool-btn" id="btnFontUp" title="Aumentar fonte">A+</button>
+        <button type="button" class="cifra-tool-btn" id="btnAutoScroll" title="Rolagem automática da tela">▶ Rolar</button>
+      </div>
+      <div class="cifra-tool-group">
+        <button type="button" class="cifra-tool-btn" id="btnEditCifra">✏️ Editar</button>
+        <button type="button" class="cifra-tool-btn" id="btnRegenCifra" title="Gerar nova versão com IA">🔄 IA</button>
+        <button type="button" class="cifra-tool-btn" id="btnCopyCifra">📋 Copiar</button>
+      </div>
+    </div>
+
+    <div class="cifra-view-container" id="cifraViewContainer" style="font-size: ${curCifraFontSize}px">
+      ${formattedHtml}
+    </div>
+
+    <div class="hymn-actions">
+      <button type="button" class="btn-outline" data-hact="meditate">☕ Meditar com o Mestre</button>
+      <button type="button" class="btn-ghost-gold" data-hact="fav">${isFav ? "★ Favoritado" : "⭐ Favoritar"}</button>
+    </div>
+    <div class="chapter-nav">
+      <button type="button" data-hgo="-1" ${h.n <= 1 ? "hidden" : ""}>‹ Hino ${h.n - 1}</button>
+      <button type="button" data-hgo="1" ${h.n >= HARPA.length ? "hidden" : ""}>Hino ${h.n + 1} ›</button>
+    </div>
+  `;
+  reader.scrollTop = 0;
+
+  $("#btnTransposeDown")?.addEventListener("click", () => {
+    curCifraSemitones -= 1;
+    renderCifraView(h);
+  });
+  $("#btnTransposeUp")?.addEventListener("click", () => {
+    curCifraSemitones += 1;
+    renderCifraView(h);
+  });
+  $("#btnFontDown")?.addEventListener("click", () => {
+    if (curCifraFontSize > 11) curCifraFontSize -= 1;
+    const box = $("#cifraViewContainer");
+    if (box) box.style.fontSize = curCifraFontSize + "px";
+  });
+  $("#btnFontUp")?.addEventListener("click", () => {
+    if (curCifraFontSize < 24) curCifraFontSize += 1;
+    const box = $("#cifraViewContainer");
+    if (box) box.style.fontSize = curCifraFontSize + "px";
+  });
+  $("#btnAutoScroll")?.addEventListener("click", toggleCifraAutoScroll);
+  $("#btnEditCifra")?.addEventListener("click", () => openCifraModal(h, rawCifra));
+  $("#btnRegenCifra")?.addEventListener("click", () => {
+    if (confirm("Deseja que o Mestre Pastoral crie uma nova harmonização para este hino?")) {
+      generateCifraWithAI(h);
+    }
+  });
+  $("#btnCopyCifra")?.addEventListener("click", () => {
+    copyText(`Hino ${h.n} — ${h.title} (Harpa Cristã)\n\n${transposed}`);
+  });
+}
+
+function openHymn(n) {
+  if (!HARPA) return;
+  const h = HARPA.find((x) => x.n === n);
+  if (!h) return;
+  curHymnNum = h.n;
+  curCifraSemitones = 0;
+  if (isCifraAutoScrolling) toggleCifraAutoScroll();
+  setView("harpa");
+  $("#harpaIndexView").hidden = true;
+  $("#harpaReaderView").hidden = false;
+
+  $("#harpaPrevBtn").disabled = h.n <= 1;
+  $("#harpaNextBtn").disabled = h.n >= HARPA.length;
+
+  $("#btnHymnLyrics")?.classList.toggle("active", curHymnTab === "lyrics");
+  $("#btnHymnCifra")?.classList.toggle("active", curHymnTab === "cifra");
+
+  if (curHymnTab === "cifra") {
+    renderCifraView(h);
+  } else {
+    renderLyricsView(h);
+  }
+}
+
 function initHarpaEvents() {
   let timer;
   $("#harpaSearchForm").onsubmit = (e) => {
@@ -819,9 +1268,46 @@ function initHarpaEvents() {
     if (!btn) return;
     openHymn(Number(btn.dataset.hymn));
   });
-  $("#harpaBackBtn").onclick = showHarpaIndex;
+  $("#harpaBackBtn").onclick = () => {
+    if (isCifraAutoScrolling) toggleCifraAutoScroll();
+    showHarpaIndex();
+  };
   $("#harpaPrevBtn").onclick = () => openHymn(curHymnNum - 1);
   $("#harpaNextBtn").onclick = () => openHymn(curHymnNum + 1);
+
+  $("#btnHymnLyrics")?.addEventListener("click", () => {
+    curHymnTab = "lyrics";
+    $("#btnHymnLyrics").classList.add("active");
+    $("#btnHymnCifra").classList.remove("active");
+    const h = HARPA?.find((x) => x.n === curHymnNum);
+    if (h) renderLyricsView(h);
+  });
+
+  $("#btnHymnCifra")?.addEventListener("click", () => {
+    curHymnTab = "cifra";
+    $("#btnHymnCifra").classList.add("active");
+    $("#btnHymnLyrics").classList.remove("active");
+    const h = HARPA?.find((x) => x.n === curHymnNum);
+    if (h) renderCifraView(h);
+  });
+
+  // Modal de edição de cifra
+  $("#cifraEditClose")?.addEventListener("click", () => ($("#cifraEditModal").hidden = true));
+  $("#cifraEditCancel")?.addEventListener("click", () => ($("#cifraEditModal").hidden = true));
+  $("#cifraEditSave")?.addEventListener("click", () => {
+    const val = $("#cifraEditText").value.trim();
+    if (!val) {
+      toast("A cifra não pode estar vazia");
+      return;
+    }
+    localStorage.setItem(CIFRA_STORAGE_PREFIX + curHymnNum, val);
+    $("#cifraEditModal").hidden = true;
+    toast("Cifra salva com sucesso! 🎸");
+    curCifraSemitones = 0;
+    const h = HARPA?.find((x) => x.n === curHymnNum);
+    if (h) renderCifraView(h);
+  });
+
   $("#harpaStudyBtn").onclick = () => {
     const h = HARPA?.find((x) => x.n === curHymnNum);
     if (!h) return;
