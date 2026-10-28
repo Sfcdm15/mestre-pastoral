@@ -1957,42 +1957,12 @@ async function handleSongLinkInput(url) {
     <h2>🔗 Link Detectado: Analisando…</h2>
     <div class="testament">Buscando letra e cifras 100% reais do Cifra Club & Letras</div>
     <div class="loading" style="padding:40px 10px;text-align:center">
-      🎸 Processando música: <i>${escapeHtml(url)}</i>…<br>
-      <span style="font-size:.85rem;color:var(--muted)">Obtendo a cifra oficial, letra correta e vídeo do YouTube. Aguarde um instante.</span>
+      🎸 Conectando ao Cifra Club e YouTube: <i>${escapeHtml(url)}</i>…<br>
+      <span style="font-size:.85rem;color:var(--muted)">Localizando a cifra e letra oficiais cadastradas. Aguarde alguns segundos…</span>
     </div>
   `;
 
-  const cleanUrl = url.toLowerCase();
-
-  // 1. Atalhos de músicas pré-configuradas na biblioteca
-  if (cleanUrl.includes("_5crm78eyua") || cleanUrl.includes("victorino") || cleanUrl.includes("victorino-silva/s")) {
-    const existing = getWorshipLibrary().find((s) => s.id === "louvor:es-victorino-silva");
-    if (existing) {
-      toast("Música 'És' de Victorino Silva aberta com cifra oficial! 🎸");
-      openSongForBand(existing);
-      return;
-    }
-  }
-
-  if (cleanUrl.includes("tudo-e-perda") || cleanUrl.includes("9sj0manxv_8")) {
-    const existing = getWorshipLibrary().find((s) => s.id === "louvor:tudo-e-perda");
-    if (existing) {
-      toast("Música 'Tudo É Perda' aberta no padrão Cifra Club! 🎸");
-      openSongForBand(existing);
-      return;
-    }
-  }
-
-  if (cleanUrl.includes("tvlbjwdzu0m") || cleanUrl.includes("nao-ha-barreiras")) {
-    const existing = getWorshipLibrary().find((s) => s.id === "louvor:nao-ha-barreiras");
-    if (existing) {
-      toast("Música 'Não Há Barreiras' aberta no padrão Cifra Club! 🎸");
-      openSongForBand(existing);
-      return;
-    }
-  }
-
-  // 2. Resolve no servidor (YouTube oEmbed + Cifra Club Solr/HTML + Letras.mus.br)
+  // 1. Resolve no servidor (YouTube oEmbed / página HTML + Cifra Club Solr/página + Letras.mus.br)
   let resolved = null;
   try {
     const res = await fetch("/api/resolve-link", {
@@ -2007,7 +1977,7 @@ async function handleSongLinkInput(url) {
     console.warn("Erro ao resolver link:", e);
   }
 
-  // 3. Se achou no Cifra Club: NUNCA gera por IA da cabeça! Usa a cifra e letra 100% REAIS
+  // 2. Se achou no Cifra Club com cifra real: ABRE DIRETO SEM PASSAR POR IA!
   if (resolved && resolved.foundCifra && resolved.cifra) {
     const song = {
       id: "louvor:" + (norm(resolved.title || "musica").replace(/[^a-z0-9]+/g, "-") || "musica"),
@@ -2033,40 +2003,48 @@ async function handleSongLinkInput(url) {
     return;
   }
 
-  const query = resolved && resolved.query ? resolved.query : url;
-  const youtubeId = (resolved && resolved.youtubeId) ? resolved.youtubeId : extractYoutubeId(url);
-  const officialLyrics = resolved && resolved.foundLyrics ? resolved.lyrics : null;
+  // 3. Se achou no Letras.mus.br com a letra oficial:
+  if (resolved && resolved.foundLyrics && resolved.lyrics) {
+    const query = resolved.artist ? `${resolved.artist} - ${resolved.title}` : (resolved.title || url);
+    await generateAILouvor(query, resolved.youtubeId || extractYoutubeId(url), resolved.lyrics);
+    return;
+  }
 
-  await generateAILouvor(query, youtubeId, officialLyrics);
+  // 4. Se não achou cifra no Cifra Club nem no Letras:
+  // NUNCA inventar letra falsa! Informar o usuário e dar campo de busca por nome
+  const cleanTitle = (resolved && resolved.title && !resolved.title.startsWith("http")) ? resolved.title : "";
+  reader.innerHTML = `
+    <div class="empty" style="padding:40px 15px;text-align:center">
+      <div style="font-size:2.4rem;margin-bottom:12px">🎸 🔍</div>
+      <h2 style="color:var(--brown);margin-bottom:8px">Cifra não localizada automaticamente para este link</h2>
+      <p style="color:var(--muted);max-width:540px;margin:0 auto 20px;font-size:.9rem">
+        Para garantir 100% de precisão e nunca inventar uma letra incorreta, pesquise pelo nome da música e cantor:
+      </p>
+      <div style="max-width:440px;margin:0 auto;display:flex;gap:8px">
+        <input type="text" id="manualCifraSearch" class="search-input" style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid var(--line)" value="${escapeHtml(cleanTitle)}" placeholder="Ex.: Gabriela Rocha - Me Atraiu">
+        <button type="button" class="btn-gold" id="btnSearchManualCifra" style="padding:10px 18px">Buscar no Cifra Club</button>
+      </div>
+      <br>
+      <button type="button" class="btn-ghost-gold" onclick="showHarpaIndex()">← Voltar à lista de louvores</button>
+    </div>
+  `;
+
+  $("#btnSearchManualCifra")?.addEventListener("click", () => {
+    const q = ($("#manualCifraSearch")?.value || "").trim();
+    if (q) handleSongLinkInput(q);
+  });
+  $("#manualCifraSearch")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const q = ($("#manualCifraSearch")?.value || "").trim();
+      if (q) handleSongLinkInput(q);
+    }
+  });
 }
 
 async function generateAILouvor(query, forcedYoutubeId = null, officialLyrics = null) {
   const ytMatch = forcedYoutubeId || extractYoutubeId(query);
-  const cleanQ = query.toLowerCase();
 
-  if (ytMatch === "_5CRM78eyUA" || cleanQ.includes("victorino") || cleanQ.includes("és")) {
-    const existing = getWorshipLibrary().find((s) => s.youtubeId === "_5CRM78eyUA" || s.id === "louvor:es-victorino-silva");
-    if (existing) {
-      openSongForBand(existing);
-      return;
-    }
-  }
-  if (ytMatch === "TVlBJwDZu0M" || cleanQ.includes("nao-ha-barreiras") || cleanQ.includes("não há barreiras")) {
-    const existing = getWorshipLibrary().find((s) => s.youtubeId === "TVlBJwDZu0M" || s.id === "louvor:nao-ha-barreiras");
-    if (existing) {
-      openSongForBand(existing);
-      return;
-    }
-  }
-  if (ytMatch === "9Sj0manxV_8" || cleanQ.includes("tudo-e-perda") || cleanQ.includes("tudo é perda")) {
-    const existing = getWorshipLibrary().find((s) => s.id === "louvor:tudo-e-perda");
-    if (existing) {
-      openSongForBand(existing);
-      return;
-    }
-  }
-
-  // Tenta resolver no servidor para pegar Cifra Club ou letra oficial antes de recorrer a IA
+  // 1. Tenta resolver no servidor PRIMEIRO se ainda não temos a letra/cifra
   if (!officialLyrics) {
     try {
       const rRes = await fetch("/api/resolve-link", {
@@ -2107,66 +2085,90 @@ async function generateAILouvor(query, forcedYoutubeId = null, officialLyrics = 
     } catch {}
   }
 
-  setView("harpa");
-  $("#harpaIndexView").hidden = true;
-  $("#harpaReaderView").hidden = false;
-  stopMetronome();
-  if (isCifraAutoScrolling) toggleCifraAutoScroll();
+  // 2. Se temos a letra oficial autenticada pelo Letras.mus.br, a IA gera apenas a cifra acima da letra real
+  if (officialLyrics) {
+    setView("harpa");
+    $("#harpaIndexView").hidden = true;
+    $("#harpaReaderView").hidden = false;
+    stopMetronome();
+    if (isCifraAutoScrolling) toggleCifraAutoScroll();
 
+    const reader = $("#harpaReader");
+    reader.innerHTML = `
+      <h2>Louvor: “${escapeHtml(query)}”…</h2>
+      <div class="testament">Formatando com a letra oficial e gerando cifras no padrão Cifra Club</div>
+      <div class="loading" style="padding:40px 10px;text-align:center">
+        🎸 Aplicando harmonia oficial sobre a letra autêntica…<br>
+        <span style="font-size:.85rem;color:var(--muted)">Aguarde alguns segundos.</span>
+      </div>
+    `;
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "louvor",
+          messages: [{
+            role: "user",
+            text: `Gere a música e cifra COMPLETA no rigoroso PADRÃO CIFRA CLUB da canção '${query}'. Siga o FLUXO 4: [METADADOS], [LETRA] e [CIFRA].\nIMPORTANTE: A letra OFICIAL e REAL da música é OBRIGATORIAMENTE esta abaixo. NÃO INVENTE NENHUMA PALAVRA E NÃO ALTERE A LETRA:\n[LETRA_OFICIAL]\n${officialLyrics}\n[FIM_LETRA_OFICIAL]`
+          }]
+        })
+      });
+
+      if (!res.ok) throw new Error("Erro na geração (" + res.status + ")");
+
+      const decoder = new TextDecoder();
+      let result = "";
+      const stream = res.body.getReader();
+      while (true) {
+        const { done, value } = await stream.read();
+        if (done) break;
+        result += decoder.decode(value, { stream: true });
+      }
+
+      if (result.trim()) {
+        const parsedSong = parseAIWorshipResponse(result, query);
+        if (ytMatch) parsedSong.youtubeId = ytMatch;
+        parsedSong.lyrics = officialLyrics;
+        saveCustomWorship(parsedSong);
+        toast("Cifra gerada no padrão Cifra Club! 🎸");
+        openSongForBand(parsedSong);
+        return;
+      }
+    } catch (err) {
+      console.warn("Erro no chat:", err);
+    }
+  }
+
+  // 3. Se NÃO encontramos cifra nem letra oficial no Cifra Club/Letras: NUNCA INVENTAR LETRA!
   const reader = $("#harpaReader");
   reader.innerHTML = `
-    <h2>Buscando Louvor: “${escapeHtml(query)}”…</h2>
-    <div class="testament">O Mestre Pastoral está montando a música 100% COMPLETA no padrão Cifra Club</div>
-    <div class="loading" style="padding:40px 10px;text-align:center">
-      🎸 Preparando Cifra e Letra no padrão Cifra Club com acordes alinhados e todas as partes…<br>
-      <span style="font-size:.85rem;color:var(--muted)">Aguarde alguns segundos enquanto a música completa é preparada.</span>
+    <div class="empty" style="padding:40px 15px;text-align:center">
+      <div style="font-size:2.4rem;margin-bottom:12px">🎸 🔍</div>
+      <h2 style="color:var(--brown);margin-bottom:8px">Música não localizada no Cifra Club</h2>
+      <p style="color:var(--muted);max-width:540px;margin:0 auto 20px;font-size:.9rem">
+        Não foi possível localizar a cifra oficial de <b>“${escapeHtml(query)}”</b>. Para garantir zero erros e não gerar letra inventada, informe o nome da música e cantor:
+      </p>
+      <div style="max-width:440px;margin:0 auto;display:flex;gap:8px">
+        <input type="text" id="manualCifraSearch2" class="search-input" style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid var(--line)" value="${escapeHtml(query)}" placeholder="Ex.: Fernandinho - Galileu">
+        <button type="button" class="btn-gold" id="btnSearchManualCifra2" style="padding:10px 18px">Buscar</button>
+      </div>
+      <br>
+      <button type="button" class="btn-ghost-gold" onclick="showHarpaIndex()">← Voltar à lista de louvores</button>
     </div>
   `;
 
-  const promptText = officialLyrics
-    ? `Gere a música e cifra COMPLETA no rigoroso PADRÃO CIFRA CLUB da canção '${query}'. Siga o FLUXO 4: [METADADOS], [LETRA] e [CIFRA].\nIMPORTANTE: A letra OFICIAL e REAL da música é OBRIGATORIAMENTE esta abaixo. NÃO INVENTE NENHUMA PALAVRA E NÃO ALTERE A LETRA:\n[LETRA_OFICIAL]\n${officialLyrics}\n[FIM_LETRA_OFICIAL]`
-    : `Gere a música e cifra COMPLETA no rigoroso PADRÃO CIFRA CLUB da canção '${query}'. Siga o FLUXO 4: [METADADOS] (com Tom, Capotraste se houver, lista de Acordes, BPM e Batida), [LETRA] completa verso a verso e [CIFRA] 100% integral do início ao fim com todas as etiquetas padrão ([Intro], [Primeira Parte], [Pré-Refrão], [Refrão], [Segunda Parte], [Interlúdio], [Ponte], [Refrão Final], [Final]). Sem resumos nem abreviações.`;
-
-  try {
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        mode: "louvor",
-        messages: [{
-          role: "user",
-          text: promptText
-        }]
-      })
-    });
-
-    if (!res.ok) throw new Error("Erro na geração (" + res.status + ")");
-
-    const decoder = new TextDecoder();
-    let result = "";
-    const stream = res.body.getReader();
-    while (true) {
-      const { done, value } = await stream.read();
-      if (done) break;
-      result += decoder.decode(value, { stream: true });
+  $("#btnSearchManualCifra2")?.addEventListener("click", () => {
+    const q = ($("#manualCifraSearch2")?.value || "").trim();
+    if (q) handleSongLinkInput(q);
+  });
+  $("#manualCifraSearch2")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const q = ($("#manualCifraSearch2")?.value || "").trim();
+      if (q) handleSongLinkInput(q);
     }
-
-    if (result.trim()) {
-      const parsedSong = parseAIWorshipResponse(result, query);
-      if (ytMatch) parsedSong.youtubeId = ytMatch;
-      if (officialLyrics) parsedSong.lyrics = officialLyrics;
-      saveCustomWorship(parsedSong);
-      toast("Cifra gerada no padrão Cifra Club! 🎸");
-      openSongForBand(parsedSong);
-    }
-  } catch (err) {
-    reader.innerHTML = `
-      <div class="empty">
-        Não foi possível gerar este louvor (${escapeHtml(err.message)}).<br><br>
-        <button type="button" class="btn-gold" onclick="generateAILouvor('${escapeHtml(query)}')">🔄 Tentar novamente</button>
-      </div>
-    `;
-  }
+  });
 }
 
 function isChordWord(w) {

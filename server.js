@@ -359,6 +359,46 @@ function extractLyricsFromCifra(cifraText) {
   return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
+function cleanYouTubeTitle(rawTitle, authorName) {
+  let title = String(rawTitle || "");
+  let artist = String(authorName || "")
+    .replace(/\s*-\s*Topic$/i, "")
+    .replace(/\s*(?:Oficial|VEVO|Music|Canal Oficial)$/i, "")
+    .trim();
+
+  if (/cifra\s*club|viol[aã]o|teclado|tv|gospel|music|m[uú]sica|letras|canal/i.test(artist)) {
+    artist = "";
+  }
+
+  title = title
+    .replace(/\s*[\(\[][^\)\]]*(?:oficial|official|clipe|video|vídeo|ao vivo|live|remaster|lyric|áudio|audio|hd|4k|dvd|completa|completo|cover|ac[uú]stico|ensaio)[^\)\]]*[\)\]]/gi, "")
+    .replace(/\s*-\s*(?:ao vivo|clipe oficial|vídeo oficial|oficial|áudio oficial).*$/gi, "");
+
+  title = title.replace(/^(?:como\s+tocar|tutorial|aula|cifra)\s+/i, "");
+  title = title.replace(/\s+(?:no\s+viol[aã]o|na\s+guitarra|no\s+teclado|no\s+baixo|simplificada|passo\s+a\s+passo).*$/i, "");
+
+  const sepMatch = title.match(/\s+[-|•–—//]\s+/);
+  if (sepMatch) {
+    const parts = title.split(sepMatch[0]);
+    if (parts.length >= 2) {
+      if (!artist) {
+        artist = parts[0].trim();
+        title = parts.slice(1).join(" ").trim();
+      } else {
+        title = parts.filter((p) => !p.toLowerCase().includes(artist.toLowerCase())).join(" ").trim() || parts[1].trim();
+      }
+    }
+  }
+
+  const daMatch = title.match(/\s+(?:da|do|de)\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)*)/i);
+  if (daMatch && !artist) {
+    artist = daMatch[1];
+    title = title.replace(daMatch[0], "").trim();
+  }
+
+  return { title: title.trim(), artist: artist.trim() };
+}
+
 async function resolveCompleteSong(rawInput) {
   const url = String(rawInput || "").trim();
   let youtubeId = null;
@@ -371,29 +411,35 @@ async function resolveCompleteSong(rawInput) {
   const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
   if (ytMatch) {
     youtubeId = ytMatch[1];
+
     try {
-      const oembedRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${youtubeId}&format=json`, {
-        signal: AbortSignal.timeout(4000),
-      });
+      const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent("https://www.youtube.com/watch?v=" + youtubeId)}&format=json`;
+      const oembedRes = await fetch(oembedUrl, { signal: AbortSignal.timeout(4000) });
       if (oembedRes.ok) {
         const data = await oembedRes.json();
-        title = data.title || "";
-        artist = (data.author_name || "")
-          .replace(/\s*-\s*Topic$/i, "")
-          .replace(/\s*(?:Oficial|VEVO|Music)$/i, "")
-          .trim();
+        const cleaned = cleanYouTubeTitle(data.title, data.author_name);
+        title = cleaned.title;
+        artist = cleaned.artist;
       }
     } catch {}
 
-    if (title.includes(" - ")) {
-      const parts = title.split(" - ");
-      artist = parts[0].trim();
-      title = parts.slice(1).join(" - ");
+    if (!title) {
+      try {
+        const ytPageRes = await fetch(`https://www.youtube.com/watch?v=${youtubeId}`, {
+          headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+          signal: AbortSignal.timeout(4000),
+        });
+        if (ytPageRes.ok) {
+          const ytHtml = await ytPageRes.text();
+          const pageTitleMatch = ytHtml.match(/<title>([^<]+?)\s*-\s*YouTube<\/title>/i);
+          if (pageTitleMatch) {
+            const cleaned = cleanYouTubeTitle(pageTitleMatch[1], "");
+            title = cleaned.title;
+            artist = cleaned.artist;
+          }
+        }
+      } catch {}
     }
-    title = title
-      .replace(/\s*[\(\[][^\)\]]*(?:oficial|official|clipe|video|vídeo|ao vivo|live|remaster|lyric|áudio|audio|hd|4k|dvd)[^\)\]]*[\)\]]/gi, "")
-      .replace(/\s*-\s*(?:ao vivo|clipe oficial|vídeo oficial|oficial).*$/gi, "")
-      .trim();
   }
 
   // 2. Check if Cifra Club URL
@@ -410,30 +456,36 @@ async function resolveCompleteSong(rawInput) {
     title = formatSlug(ccSongSlug);
   }
 
-  const searchQuery = title ? (artist ? `${artist} ${title}` : title) : url;
-
-  // 3. Search Cifra Club Solr if we don't have exact slugs
+  // 3. Search Cifra Club Solr se não tivermos os slugs exatos
   if (!ccArtistSlug || !ccSongSlug) {
-    try {
-      const solrRes = await fetch(`https://solr.sscdn.co/cc/h2/?q=${encodeURIComponent(searchQuery)}`, {
-        signal: AbortSignal.timeout(4000),
-      });
-      if (solrRes.ok) {
-        const text = await solrRes.text();
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const data = JSON.parse(jsonMatch[0]);
-          const docs = data?.response?.docs || [];
-          const songDoc = docs.find((d) => d.t === "2" && d.d && d.u);
-          if (songDoc) {
-            ccArtistSlug = songDoc.d;
-            ccSongSlug = songDoc.u;
-            if (!title) title = songDoc.m || "";
-            if (!artist) artist = songDoc.a || "";
+    const candidateQueries = [];
+    if (artist && title) candidateQueries.push(`${artist} ${title}`, `${title} ${artist}`);
+    if (title) candidateQueries.push(title);
+    if (!candidateQueries.length) candidateQueries.push(url);
+
+    for (const q of candidateQueries) {
+      try {
+        const solrRes = await fetch(`https://solr.sscdn.co/cc/h2/?q=${encodeURIComponent(q)}`, {
+          signal: AbortSignal.timeout(3500),
+        });
+        if (solrRes.ok) {
+          const text = await solrRes.text();
+          const jsonMatch = text.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const data = JSON.parse(jsonMatch[0]);
+            const docs = data?.response?.docs || [];
+            const songDoc = docs.find((d) => d.t === "2" && d.d && d.u);
+            if (songDoc) {
+              ccArtistSlug = songDoc.d;
+              ccSongSlug = songDoc.u;
+              title = songDoc.m || title;
+              artist = songDoc.a || artist;
+              break;
+            }
           }
         }
-      }
-    } catch {}
+      } catch {}
+    }
   }
 
   // 4. Fetch Cifra Club page if slugs found
@@ -487,49 +539,49 @@ async function resolveCompleteSong(rawInput) {
 
   // 5. Fetch Official Lyrics from Letras.mus.br Solr + Page
   let lyricsText = "";
-  try {
-    const lQuery = title ? `${artist} ${title}` : searchQuery;
-    const lSolrRes = await fetch(`https://solr.sscdn.co/letras/m1/?q=${encodeURIComponent(lQuery)}`, {
-      signal: AbortSignal.timeout(4000),
-    });
-    if (lSolrRes.ok) {
-      const lText = await lSolrRes.text();
-      const lJsonMatch = lText.match(/\{[\s\S]*\}/);
-      if (lJsonMatch) {
-        const lData = JSON.parse(lJsonMatch[0]);
-        const lDoc = (lData?.response?.docs || []).find((d) => d.t === "2" && d.dns && d.url);
-        if (lDoc) {
-          if (!title) title = lDoc.txt || "";
-          if (!artist) artist = lDoc.art || "";
-          const lPageRes = await fetch(`https://www.letras.mus.br/${lDoc.dns}/${lDoc.url}/`, {
-            headers: { "User-Agent": "Mozilla/5.0" },
-            signal: AbortSignal.timeout(4000),
-          });
-          if (lPageRes.ok) {
-            const lHtml = await lPageRes.text();
-            const lyricDiv = lHtml.match(/<div class="lyric-original[^"]*">([\s\S]*?)<\/div>/i);
-            if (lyricDiv) {
-              lyricsText = decodeHtmlEntities(
-                lyricDiv[1]
-                  .replace(/<\/p>/gi, "\n\n")
-                  .replace(/<br\s*\/?>/gi, "\n")
-                  .replace(/<[^>]+>/g, "")
-              ).trim();
+  if (title) {
+    try {
+      const lQuery = artist ? `${artist} ${title}` : title;
+      const lSolrRes = await fetch(`https://solr.sscdn.co/letras/m1/?q=${encodeURIComponent(lQuery)}`, {
+        signal: AbortSignal.timeout(4000),
+      });
+      if (lSolrRes.ok) {
+        const lText = await lSolrRes.text();
+        const lJsonMatch = lText.match(/\{[\s\S]*\}/);
+        if (lJsonMatch) {
+          const lData = JSON.parse(lJsonMatch[0]);
+          const lDoc = (lData?.response?.docs || []).find((d) => d.t === "2" && d.dns && d.url);
+          if (lDoc) {
+            const lPageRes = await fetch(`https://www.letras.mus.br/${lDoc.dns}/${lDoc.url}/`, {
+              headers: { "User-Agent": "Mozilla/5.0" },
+              signal: AbortSignal.timeout(4000),
+            });
+            if (lPageRes.ok) {
+              const lHtml = await lPageRes.text();
+              const lyricDiv = lHtml.match(/<div class="lyric-original[^"]*">([\s\S]*?)<\/div>/i);
+              if (lyricDiv) {
+                lyricsText = decodeHtmlEntities(
+                  lyricDiv[1]
+                    .replace(/<\/p>/gi, "\n\n")
+                    .replace(/<br\s*\/?>/gi, "\n")
+                    .replace(/<[^>]+>/g, "")
+                ).trim();
+              }
             }
           }
         }
       }
-    }
-  } catch {}
+    } catch {}
+  }
 
   if (!lyricsText && cifraText) {
     lyricsText = extractLyricsFromCifra(cifraText);
   }
 
   // 6. Find YouTube video ID if still missing
-  if (!youtubeId && (title || searchQuery)) {
+  if (!youtubeId && (title || artist)) {
     try {
-      const ytQ = encodeURIComponent(title ? `${artist} ${title}` : searchQuery);
+      const ytQ = encodeURIComponent(artist ? `${artist} ${title}` : title);
       const ytRes = await fetch(`https://www.youtube.com/results?search_query=${ytQ}`, {
         headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
         signal: AbortSignal.timeout(4000),
@@ -545,14 +597,14 @@ async function resolveCompleteSong(rawInput) {
   return {
     foundCifra: Boolean(cifraText),
     foundLyrics: Boolean(lyricsText),
-    title: title || searchQuery,
+    title: title || url,
     artist: artist || "Ministério de Louvor",
     youtubeId,
     tom,
     capo,
     lyrics: lyricsText,
     cifra: cifraText,
-    query: title ? (artist ? `${artist} - ${title}` : title) : searchQuery,
+    query: title ? (artist ? `${artist} - ${title}` : title) : url,
   };
 }
 
