@@ -679,12 +679,55 @@ function showHarpaIndex() {
 const WORSHIP_STORAGE_KEY = "mestre-pastoral:worship-library";
 const CIFRA_STORAGE_PREFIX = "mestre-pastoral:cifra:";
 
-let curBandMode = "cantor"; // 'cantor' | 'violao' | 'teclado' | 'bateria'
+let curBandMode = "duo"; // 'duo' | 'cantor' | 'violao' | 'teclado' | 'bateria'
 let curSongData = null; // objeto normalizado da música atual
 let curCifraSemitones = 0;
 let curCifraFontSize = 15;
 let cifraAutoScrollTimer = null;
 let isCifraAutoScrolling = false;
+let curAutoScrollSpeed = 1;
+let isYtCollapsed = false;
+
+function extractYoutubeId(input) {
+  if (!input) return null;
+  const str = String(input).trim();
+  const m = str.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+  if (m) return m[1];
+  if (/^[a-zA-Z0-9_-]{11}$/.test(str) && !/^\d+$/.test(str)) return str;
+  return null;
+}
+
+function buildYoutubePlayerHtml(s) {
+  const activeYtId = s.youtubeId || localStorage.getItem("worship_yt_" + s.id) || null;
+  if (!activeYtId) return "";
+
+  return `
+    <div class="youtube-player-card" id="ytPlayerCard">
+      <div class="youtube-card-header">
+        <div class="youtube-card-title">
+          <svg viewBox="0 0 24 24" width="22" height="22" style="flex-shrink:0"><path fill="#e62117" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+          <div>
+            <b>YouTube Oficial:</b> ${escapeHtml(s.artist ? s.artist + " — " : "")}${escapeHtml(s.title)}
+          </div>
+        </div>
+        <div class="youtube-card-actions">
+          <button type="button" class="cifra-tool-btn" id="btnToggleYtCollapse" title="Recolher ou Expandir o Vídeo">
+            ${isYtCollapsed ? "▶️ Expandir Vídeo" : "➖ Recolher Vídeo"}
+          </button>
+          <button type="button" class="cifra-tool-btn" id="btnEditYtLink" title="Alterar ou colar outro link do YouTube">
+            🔗 Alterar Link
+          </button>
+          <a href="https://www.youtube.com/watch?v=${encodeURIComponent(activeYtId)}" target="_blank" rel="noopener" class="cifra-tool-btn" title="Abrir no app do YouTube">
+            ↗ Assistir no YouTube
+          </a>
+        </div>
+      </div>
+      <div class="youtube-iframe-box" id="ytIframeBox" style="${isYtCollapsed ? "display:none;" : ""}">
+        <iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(activeYtId)}?enablejsapi=1" title="${escapeHtml(s.title)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+      </div>
+    </div>
+  `;
+}
 
 // Metrônomo para Bateria
 let metronomeTimer = null;
@@ -743,6 +786,7 @@ const BUILTIN_LOUVORES = [
     id: "louvor:bondade-de-deus",
     title: "Bondade de Deus",
     artist: "Isaías Saad",
+    youtubeId: "vBf4u5QZ5-c",
     tom: "G",
     bpm: 70,
     compasso: "4/4",
@@ -880,9 +924,148 @@ Eu cantarei da bondade de Deus
 Eu cantarei da bondade de Deus`
   },
   {
+    id: "louvor:nao-ha-barreiras",
+    title: "Não Há Barreiras",
+    artist: "Álvaro Tito",
+    youtubeId: "TVlBJwDZu0M",
+    tom: "E",
+    bpm: 72,
+    compasso: "4/4",
+    estilo: "Balada Gospel / Clássico",
+    batidaViolao: "Dedilhado suave nas estrofes; levada balada 4/4 crescente no refrão (↓  ↓↑  ↑↓↑)",
+    teclado: "Piano acústico expressivo com Pad de fundo em Mi e modulação em Fá",
+    bateria: "Entrada suave com prato e aro de caixa nos versos; condução cheia e bumbo marcado no refrão",
+    lyrics: `[Verso 1]
+Sei que os problemas vão surgir
+Sei que provações virão
+Põe a tua fé no intercessor que é Jesus
+Que sempre te estende a forte mão
+Sei que as muralhas do temor
+Hão de intimidar teu ser
+Mas põe a tua fé no intercessor que é Jesus
+E as barreiras tu irás romper
+
+[Coro]
+Pois não há barreiras
+Para aquele revestido do poder
+Que vem de Deus destruindo todo mal e dor
+As mais altas barreiras tu irás transpor
+
+[Verso 2]
+Sei que não há nada nem ninguém
+Que consiga separar, separar
+O cristão de Deus e de uma vida mais além
+No céu onde os temores vão cessar
+É intransponível esse amor
+Que Jesus tem pelos seus
+Dando livramento em plena luta, em plena dor
+Jesus é o nosso grande intercessor
+
+[Coro]
+Pois não há barreiras
+Para aquele revestido do poder
+Que vem de Deus destruindo todo mal e dor
+As mais altas barreiras tu irás transpor
+
+[Modulação para Fá Maior - Coro]
+Pois não há barreiras
+Para aquele revestido do poder
+Que vem de Deus destruindo todo mal e dor
+As mais altas barreiras tu irás transpor
+
+[Final]
+As mais altas barreiras tu irás transpor
+Que vem de Deus destruindo todo mal e dor
+As mais altas barreiras tu irás transpor
+As mais altas barreiras tu irás transpor!`,
+    cifra: `[Tom: E]
+
+[Intro: E  C#m  A  B  E  C#m  A  B]
+
+[Verso 1]
+E           B         C#m    B
+Sei que os problemas vão surgir
+A                     B           E
+Sei que provações virão
+A               B/A                       G#m   C#m
+Põe a tua fé no intercessor que é Jesus
+F#m                   B
+Que sempre te estende a forte mão
+E         B         C#m
+Sei que as muralhas do temor
+A                    E
+Hão de intimidar teu ser
+A                   B/A                   G#m  C#m
+Mas põe a tua fé no intercessor que é Jesus
+A                 B             A  E
+E as barreiras tu irás romper
+
+[Coro]
+A           B         E
+Pois não há barreiras
+F#m          B          D     E
+Para aquele revestido do poder
+A           B                G#m          C#m
+Que vem de Deus destruindo todo mal e dor
+A                     B                     A   E
+As mais altas barreiras tu irás transpor
+
+[Verso 2]
+E           B         C#m    B
+Sei que não há nada nem ninguém
+A                    E
+Que consiga separar, separar
+A                     B                  G#m     C#m
+O cristão de Deus e de uma vida mais além
+F#m                    B
+No céu onde os temores vão cessar
+E         B         C#m
+É intransponível esse amor
+A                     E
+Que Jesus tem pelos seus
+A                   B/A                     G#m  C#m
+Dando livramento em plena luta, em plena dor
+A                    B            A  E
+Jesus é o nosso grande intercessor
+
+[Coro]
+A           B         E
+Pois não há barreiras
+F#m          B          D     E
+Para aquele revestido do poder
+A           B                G#m          C#m
+Que vem de Deus destruindo todo mal e dor
+A                     B                     A   E
+As mais altas barreiras tu irás transpor
+
+[Ponte Instrumental - Modulação para F]
+Bb  C  Bb  C
+
+[Coro Final - Tom: F]
+Bb          C         F
+Pois não há barreiras
+Gm           C          Eb    F
+Para aquele revestido do poder
+Bb          C                Am           Dm
+Que vem de Deus destruindo todo mal e dor
+Bb                    C                     Bb   F
+As mais altas barreiras tu irás transpor
+
+[Final]
+Bb                    C                     Dm
+As mais altas barreiras tu irás transpor
+Bb          C                Am           Dm
+Que vem de Deus destruindo todo mal e dor
+Bb                    C                     Bb
+As mais altas barreiras tu irás transpor
+Bb                    C                     F
+As mais altas barreiras tu irás transpor!`
+  },
+  {
     id: "louvor:a-casa-e-sua",
     title: "A Casa É Sua",
     artist: "Casa Worship",
+    youtubeId: "1-J_0V7u0p0",
     tom: "G",
     bpm: 68,
     compasso: "4/4",
@@ -1001,6 +1184,7 @@ Deixamos ela pra Você`
     id: "louvor:raridade",
     title: "Raridade",
     artist: "Anderson Freire",
+    youtubeId: "T8Ww_9Jc8tM",
     tom: "G",
     bpm: 72,
     compasso: "4/4",
@@ -1279,7 +1463,7 @@ function toggleCifraAutoScroll() {
     isCifraAutoScrolling = false;
     if (btn) {
       btn.classList.remove("active");
-      btn.textContent = "▶ Rolar";
+      btn.textContent = "▶ Rolar Tela";
     }
   } else {
     isCifraAutoScrolling = true;
@@ -1287,13 +1471,14 @@ function toggleCifraAutoScroll() {
       btn.classList.add("active");
       btn.textContent = "⏸ Pausar";
     }
+    const speedMs = Math.max(15, Math.round(45 / curAutoScrollSpeed));
     cifraAutoScrollTimer = setInterval(() => {
       if (!isCifraAutoScrolling || !reader) return;
       reader.scrollTop += 1;
       if (reader.scrollTop + reader.clientHeight >= reader.scrollHeight) {
         toggleCifraAutoScroll();
       }
-    }, 45);
+    }, speedMs);
   }
 }
 
@@ -1330,6 +1515,9 @@ function parseAIWorshipResponse(text, originalQuery) {
   const lyrics = letraMatch ? letraMatch[1].trim() : text.trim();
   const cifra = cifraMatch ? cifraMatch[1].trim() : text.trim();
 
+  const ytRaw = getField("YouTube|Video|Link", "");
+  const youtubeId = extractYoutubeId(ytRaw) || extractYoutubeId(originalQuery) || null;
+
   const id = "custom:" + norm(title).replace(/[^a-z0-9]+/g, "-");
   return {
     id,
@@ -1337,6 +1525,7 @@ function parseAIWorshipResponse(text, originalQuery) {
     n: null,
     title,
     artist,
+    youtubeId,
     tom,
     bpm,
     compasso,
@@ -1350,6 +1539,15 @@ function parseAIWorshipResponse(text, originalQuery) {
 }
 
 async function generateAILouvor(query) {
+  const ytMatch = extractYoutubeId(query);
+  if (ytMatch === "TVlBJwDZu0M") {
+    const existing = getWorshipLibrary().find((s) => s.youtubeId === "TVlBJwDZu0M" || s.id === "louvor:nao-ha-barreiras");
+    if (existing) {
+      openSongForBand(existing);
+      return;
+    }
+  }
+
   setView("harpa");
   $("#harpaIndexView").hidden = true;
   $("#harpaReaderView").hidden = false;
@@ -1434,11 +1632,79 @@ function renderCurrentBandView() {
     })
     .join("");
 
-  if (curBandMode === "cantor") {
+  const youtubePlayerHtml = buildYoutubePlayerHtml(s);
+  const activeYtId = s.youtubeId || localStorage.getItem("worship_yt_" + s.id) || null;
+
+  if (curBandMode === "duo") {
+    // ---------------- MODO DUPLO: LETRA NO CANTO & CIFRAS AO LADO ----------------
+    reader.innerHTML = `
+      <div class="duo-worship-container">
+        <h2>${s.isHarpa ? `Hino ${s.n} · ` : ""}${escapeHtml(s.title)}</h2>
+        <div class="testament">${escapeHtml(s.artist || "Louvor Congregacional")} · Letra no Canto & Cifras ao Lado</div>
+
+        ${youtubePlayerHtml}
+
+        <div class="cifra-toolbar duo-toolbar">
+          <div class="cifra-tool-group">
+            <button type="button" class="cifra-tool-btn" id="btnTransposeDown" title="Abaixar meio tom">◀ Tom</button>
+            <span class="cifra-key-pill" id="cifraKeyBadge">Tom: ${escapeHtml(currentKey)}</span>
+            <button type="button" class="cifra-tool-btn" id="btnTransposeUp" title="Aumentar meio tom">Tom ▶</button>
+          </div>
+          <div class="cifra-tool-group">
+            <button type="button" class="cifra-tool-btn" id="btnFontDown" title="Diminuir fonte">A-</button>
+            <button type="button" class="cifra-tool-btn" id="btnFontUp" title="Aumentar fonte">A+</button>
+            <button type="button" class="cifra-tool-btn ${isCifraAutoScrolling ? "active" : ""}" id="btnAutoScroll" title="Rolagem automática da tela">${isCifraAutoScrolling ? "⏸ Pausar" : "▶ Rolar Tela"}</button>
+            <button type="button" class="cifra-tool-btn" id="btnScrollSpeed" title="Velocidade da rolagem">${curAutoScrollSpeed}x</button>
+          </div>
+          <div class="cifra-tool-group">
+            ${activeYtId ? `<button type="button" class="cifra-tool-btn" id="btnToggleYtCollapse">${isYtCollapsed ? "▶️ Ver Vídeo" : "➖ Ocultar Vídeo"}</button>` : `<button type="button" class="cifra-tool-btn" id="btnEditYtLink">📺 + YouTube</button>`}
+            <button type="button" class="cifra-tool-btn" id="btnEditCifra">✏️ Cifra</button>
+            <button type="button" class="cifra-tool-btn" id="btnCopyCifra">📋 Copiar</button>
+          </div>
+        </div>
+
+        <div class="duo-worship-grid">
+          <!-- Coluna 1 (Canto): LETRA PARA O CANTOR -->
+          <div class="duo-col duo-lyrics-col">
+            <div class="duo-col-header">
+              <span class="duo-col-badge">🎤 LETRA (CANTOR)</span>
+              <span class="duo-col-sub">Letra limpa sem acordes</span>
+            </div>
+            <div class="cantor-lyrics-box" id="cantorLyricsBox" style="font-size: ${curCifraFontSize + 2}px">
+              ${cantorLyricsHtml}
+            </div>
+          </div>
+
+          <!-- Coluna 2 (Lado): CIFRA PARA O MÚSICO -->
+          <div class="duo-col duo-cifra-col">
+            <div class="duo-col-header">
+              <span class="duo-col-badge">🎸 CIFRA (VIOLÃO / TECLADO)</span>
+              <span class="duo-col-sub">Tom: ${escapeHtml(currentKey)} · Acordes sobre a letra</span>
+            </div>
+            <div class="cifra-view-container" id="cifraViewContainer" style="font-size: ${curCifraFontSize}px">
+              ${formattedCifraHtml || '<div class="empty">Cifra não disponível.</div>'}
+            </div>
+          </div>
+        </div>
+
+        <div class="hymn-actions">
+          <button type="button" class="btn-outline" data-hact="meditate">☕ Meditar com o Mestre</button>
+          ${s.isHarpa ? `<button type="button" class="btn-ghost-gold" data-hact="fav">${isFav ? "★ Favoritado" : "⭐ Favoritar"}</button>` : ""}
+          <button type="button" class="btn-ghost-gold" data-hact="copy">📋 Copiar letra</button>
+        </div>
+        <div class="chapter-nav">
+          <button type="button" data-hgo="-1" ${!s.isHarpa || s.n <= 1 ? "hidden" : ""}>‹ Hino anterior</button>
+          <button type="button" data-hgo="1" ${!s.isHarpa || s.n >= HARPA?.length ? "hidden" : ""}>Próximo hino ›</button>
+        </div>
+      </div>
+    `;
+  } else if (curBandMode === "cantor") {
     // ---------------- MODO 1: CANTOR ----------------
     reader.innerHTML = `
       <h2>${s.isHarpa ? `Hino ${s.n} · ` : ""}${escapeHtml(s.title)}</h2>
       <div class="testament">${escapeHtml(s.artist || "Louvor Congregacional")} · Modo Cantor</div>
+
+      ${youtubePlayerHtml}
 
       <div class="cantor-meta-bar">
         <span>🎵 Tom: ${escapeHtml(currentKey)}</span>
@@ -1469,6 +1735,8 @@ function renderCurrentBandView() {
     reader.innerHTML = `
       <h2>${s.isHarpa ? `Hino ${s.n} · ` : ""}${escapeHtml(s.title)}</h2>
       <div class="testament">${escapeHtml(s.artist || "Louvor Congregacional")} · Violão & Guitarra</div>
+
+      ${youtubePlayerHtml}
 
       <div class="instrument-card">
         <div class="instrument-card-head">
@@ -1524,6 +1792,8 @@ function renderCurrentBandView() {
       <h2>${s.isHarpa ? `Hino ${s.n} · ` : ""}${escapeHtml(s.title)}</h2>
       <div class="testament">${escapeHtml(s.artist || "Louvor Congregacional")} · Teclado & Piano</div>
 
+      ${youtubePlayerHtml}
+
       <div class="instrument-card">
         <div class="instrument-card-head">
           <span>🎹 Guia de Teclado & Formação dos Acordes</span>
@@ -1575,6 +1845,8 @@ function renderCurrentBandView() {
     reader.innerHTML = `
       <h2>${s.isHarpa ? `Hino ${s.n} · ` : ""}${escapeHtml(s.title)}</h2>
       <div class="testament">${escapeHtml(s.artist || "Louvor Congregacional")} · Bateria & Metrônomo</div>
+
+      ${youtubePlayerHtml}
 
       <div class="bateria-dashboard">
         <div class="bpm-label">Andamento & Compasso (${escapeHtml(s.compasso || "4/4")})</div>
@@ -1640,15 +1912,85 @@ function renderCurrentBandView() {
   });
   $("#btnFontDown")?.addEventListener("click", () => {
     if (curCifraFontSize > 11) curCifraFontSize -= 1;
-    const box = $("#cifraViewContainer") || $("#cantorLyricsBox");
-    if (box) box.style.fontSize = curCifraFontSize + "px";
+    const cifraBox = $("#cifraViewContainer");
+    const lyricsBox = $("#cantorLyricsBox");
+    if (cifraBox) cifraBox.style.fontSize = curCifraFontSize + "px";
+    if (lyricsBox) lyricsBox.style.fontSize = (curCifraFontSize + 2) + "px";
   });
   $("#btnFontUp")?.addEventListener("click", () => {
     if (curCifraFontSize < 26) curCifraFontSize += 1;
-    const box = $("#cifraViewContainer") || $("#cantorLyricsBox");
-    if (box) box.style.fontSize = curCifraFontSize + "px";
+    const cifraBox = $("#cifraViewContainer");
+    const lyricsBox = $("#cantorLyricsBox");
+    if (cifraBox) cifraBox.style.fontSize = curCifraFontSize + "px";
+    if (lyricsBox) lyricsBox.style.fontSize = (curCifraFontSize + 2) + "px";
   });
   $("#btnAutoScroll")?.addEventListener("click", toggleCifraAutoScroll);
+  $("#btnScrollSpeed")?.addEventListener("click", () => {
+    if (curAutoScrollSpeed === 1) curAutoScrollSpeed = 1.5;
+    else if (curAutoScrollSpeed === 1.5) curAutoScrollSpeed = 2;
+    else if (curAutoScrollSpeed === 2) curAutoScrollSpeed = 0.75;
+    else curAutoScrollSpeed = 1;
+
+    const btn = $("#btnScrollSpeed");
+    if (btn) btn.textContent = curAutoScrollSpeed + "x";
+
+    if (isCifraAutoScrolling) {
+      clearInterval(cifraAutoScrollTimer);
+      const speedMs = Math.max(15, Math.round(45 / curAutoScrollSpeed));
+      cifraAutoScrollTimer = setInterval(() => {
+        const reader = $("#harpaReader");
+        if (!isCifraAutoScrolling || !reader) return;
+        reader.scrollTop += 1;
+        if (reader.scrollTop + reader.clientHeight >= reader.scrollHeight) {
+          toggleCifraAutoScroll();
+        }
+      }, speedMs);
+    }
+  });
+
+  $("#btnToggleYtCollapse")?.addEventListener("click", () => {
+    isYtCollapsed = !isYtCollapsed;
+    const box = $("#ytIframeBox");
+    const btn = $("#btnToggleYtCollapse");
+    if (box) box.style.display = isYtCollapsed ? "none" : "";
+    if (btn) btn.textContent = isYtCollapsed ? "▶️ Expandir Vídeo" : "➖ Recolher Vídeo";
+  });
+
+  $("#btnToggleYtEmbed")?.addEventListener("click", () => {
+    isYtCollapsed = !isYtCollapsed;
+    const box = $("#ytIframeBox");
+    const btn = $("#btnToggleYtCollapse");
+    if (box) box.style.display = isYtCollapsed ? "none" : "";
+    if (btn) btn.textContent = isYtCollapsed ? "▶️ Expandir Vídeo" : "➖ Recolher Vídeo";
+    const toggleBtn = $("#btnToggleYtEmbed");
+    if (toggleBtn) toggleBtn.textContent = isYtCollapsed ? "📺 Ver Vídeo" : "📺 Ocultar Vídeo";
+  });
+
+  $("#btnEditYtLink")?.addEventListener("click", () => {
+    const currYt = s.youtubeId || localStorage.getItem("worship_yt_" + s.id) || "";
+    const input = prompt(
+      "Cole o link do YouTube para este louvor:\n(Exemplo: https://www.youtube.com/watch?v=TVlBJwDZu0M)",
+      currYt ? `https://www.youtube.com/watch?v=${currYt}` : ""
+    );
+    if (input !== null) {
+      const vidId = extractYoutubeId(input);
+      if (vidId) {
+        s.youtubeId = vidId;
+        localStorage.setItem("worship_yt_" + s.id, vidId);
+        isYtCollapsed = false;
+        toast("Vídeo do YouTube configurado! 📺");
+        renderCurrentBandView();
+      } else if (!input.trim()) {
+        s.youtubeId = null;
+        localStorage.removeItem("worship_yt_" + s.id);
+        toast("Vídeo do YouTube removido.");
+        renderCurrentBandView();
+      } else {
+        toast("Link do YouTube não reconhecido.");
+      }
+    }
+  });
+
   $("#btnEditCifra")?.addEventListener("click", () => openCifraModal(s, rawCifra));
   $("#btnCopyCifra")?.addEventListener("click", () => {
     copyText(`${s.title}\n\n${transposedCifra}`);
@@ -1722,11 +2064,12 @@ function renderHarpaList(submitTriggered = false) {
   if (curHarpaRange === "LOUVORES" && !rawQ) {
     let html = `<p class="count">${worshipLib.length} louvor(es) da igreja disponíveis</p><div class="harpa-grid">`;
     for (const song of worshipLib) {
+      const hasYt = song.youtubeId || localStorage.getItem("worship_yt_" + song.id);
       html += `
         <button type="button" class="harpa-card" data-worship="${escapeHtml(song.id)}">
-          <div class="harpa-num" style="background:#f4e4c8;font-size:1.1rem">🎸</div>
+          <div class="harpa-num" style="background:${hasYt ? "#ffe8e8" : "#f4e4c8"};font-size:1.1rem">${hasYt ? "📺" : "🎸"}</div>
           <div class="harpa-info">
-            <div class="harpa-title">${escapeHtml(song.title)}</div>
+            <div class="harpa-title">${escapeHtml(song.title)} ${hasYt ? '<span class="youtube-badge">▶ YouTube</span>' : ""}</div>
             <div class="harpa-snip">${escapeHtml(song.artist || "Louvor da Igreja")} · Tom: ${song.tom || "G"} · ${song.bpm || 70} BPM</div>
           </div>
         </button>
@@ -1740,9 +2083,13 @@ function renderHarpaList(submitTriggered = false) {
 
   let filtered = HARPA;
   let matchingWorship = [];
+  const ytMatch = extractYoutubeId(rawQ);
 
   if (rawQ) {
-    matchingWorship = worshipLib.filter((w) => norm(w.title).includes(nq) || norm(w.artist || "").includes(nq));
+    matchingWorship = worshipLib.filter((w) => {
+      if (ytMatch && (w.youtubeId === ytMatch || localStorage.getItem("worship_yt_" + w.id) === ytMatch)) return true;
+      return norm(w.title).includes(nq) || norm(w.artist || "").includes(nq);
+    });
     if (exactNum) {
       const exact = HARPA.filter((h) => h.n === exactNum);
       const partial = HARPA.filter((h) => h.n !== exactNum && String(h.n).includes(String(exactNum)));
@@ -1771,26 +2118,38 @@ function renderHarpaList(submitTriggered = false) {
 
   let html = "";
 
-  // Botão para gerar com IA qualquer louvor digitado fora da Harpa
+  // Botão para gerar com IA qualquer louvor digitado fora da Harpa ou link do YouTube
   if (rawQ && rawQ.length >= 2) {
-    html += `
-      <div class="search-ai-louvor-card">
-        <div style="font-size:1.9rem;margin-bottom:4px">✨🎸</div>
-        <div style="font-weight:700;color:var(--brown);font-size:1.1rem">Música da Igreja: “${escapeHtml(rawQ)}”</div>
-        <p style="font-size:.86rem;color:var(--muted);margin:4px 0 14px">O Mestre Pastoral pesquisa e monta a Letra para o Cantor, Cifra para Violão/Teclado e Ritmo/Metrônomo para a Bateria.</p>
-        <button type="button" class="btn-gold" id="btnRunAILouvor">🎸 Abrir “${escapeHtml(rawQ)}” para a Banda com IA</button>
-      </div>
-    `;
+    if (ytMatch && !matchingWorship.length) {
+      html += `
+        <div class="search-ai-louvor-card youtube-search-card" style="border: 2px solid #e62117; background: #fffcfc;">
+          <div style="font-size:2rem;margin-bottom:4px">📺 ▶️</div>
+          <div style="font-weight:700;color:#c00;font-size:1.15rem">Música do YouTube Detectada!</div>
+          <p style="font-size:.88rem;color:var(--muted);margin:4px 0 14px">O Mestre Pastoral vai carregar o vídeo, montar a <b>Letra no canto</b> e as <b>Cifras ao lado</b> com rolagem para acompanhar ao vivo.</p>
+          <button type="button" class="btn-gold" id="btnRunAILouvor" style="background:#e62117;color:#fff;border-color:#b8140c">📺 Abrir Louvor com Vídeo do YouTube</button>
+        </div>
+      `;
+    } else {
+      html += `
+        <div class="search-ai-louvor-card">
+          <div style="font-size:1.9rem;margin-bottom:4px">✨🎸</div>
+          <div style="font-weight:700;color:var(--brown);font-size:1.1rem">Música da Igreja: “${escapeHtml(rawQ)}”</div>
+          <p style="font-size:.86rem;color:var(--muted);margin:4px 0 14px">O Mestre Pastoral pesquisa e monta a Letra para o Cantor, Cifra para Violão/Teclado e Ritmo/Metrônomo para a Bateria.</p>
+          <button type="button" class="btn-gold" id="btnRunAILouvor">🎸 Abrir “${escapeHtml(rawQ)}” para a Banda com IA</button>
+        </div>
+      `;
+    }
   }
 
   if (matchingWorship.length > 0) {
     html += `<p class="count">Louvores da Igreja encontrados:</p><div class="harpa-grid" style="margin-bottom:20px">`;
     for (const song of matchingWorship) {
+      const hasYt = song.youtubeId || localStorage.getItem("worship_yt_" + song.id);
       html += `
         <button type="button" class="harpa-card" data-worship="${escapeHtml(song.id)}">
-          <div class="harpa-num" style="background:#f4e4c8;font-size:1.1rem">🎸</div>
+          <div class="harpa-num" style="background:${hasYt ? "#ffe8e8" : "#f4e4c8"};font-size:1.1rem">${hasYt ? "📺" : "🎸"}</div>
           <div class="harpa-info">
-            <div class="harpa-title">${escapeHtml(song.title)}</div>
+            <div class="harpa-title">${escapeHtml(song.title)} ${hasYt ? '<span class="youtube-badge">▶ YouTube</span>' : ""}</div>
             <div class="harpa-snip">${escapeHtml(song.artist || "Louvor da Igreja")} · Tom: ${song.tom || "G"}</div>
           </div>
         </button>
