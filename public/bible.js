@@ -1059,10 +1059,7 @@ No olhar de Jesus
     batidaViolao: "Dedilhado suave na primeira parte; levada worship 4/4 crescente no refrão (↓  ↓↑  ↑↓↑)",
     teclado: "Pad ambiente atmosférico sustentando acordes de C, Am, G e F; condução suave no piano acústico",
     bateria: "Começo suave com pratos e aro de caixa; dinâmica crescente a partir da segunda parte e bumbo marcado no refrão",
-    lyrics: `[Intro]
-C  Am  G  F
-
-[Primeira Parte]
+    lyrics: `[Primeira Parte]
 Tudo é perda se não tenho a Ti
 A Tua graça é o que me basta
 Sem Você, não sei pra onde ir
@@ -1079,10 +1076,6 @@ Se eu não tenho a Ti, não tenho nada
 Nada eu serei sem Ti, Senhor
 Só Tua presença é o que me basta
 Eu Te levarei por onde eu for
-
-[Interlúdio]
-Dm  G  C/E  F
-Dm  G  C/E  F
 
 [Ponte]
 Tua presença é o que me basta
@@ -2176,6 +2169,106 @@ async function generateAILouvor(query, forcedYoutubeId = null, officialLyrics = 
   }
 }
 
+function isChordWord(w) {
+  return (
+    /^[A-G][#b]?(?:[a-zA-Z0-9#+°ø\(\)\-\^~]*)?(?:\/[A-G][#b]?)?$/.test(w) ||
+    w === "|" ||
+    w === "/" ||
+    w === "%" ||
+    /^\(\d+x\)$/i.test(w)
+  );
+}
+
+function cleanSingerLyrics(raw) {
+  if (!raw) return "";
+  const lines = String(raw).split(/\r?\n/);
+  const out = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (out.length && out[out.length - 1] !== "") out.push("");
+      continue;
+    }
+    // Remove cabeçalhos técnicos de intro, tabs ou cifras
+    if (/^\[(Tom|Intro|Tab|Solo|Capotraste|Acordes)/i.test(trimmed)) continue;
+    if (/^[EBGDAEebgdae]\|[-0-9hpb/~\s|xX]+/.test(trimmed)) continue;
+
+    // Preserva tags de estrutura para orientar o cantor
+    if (/^\[(Primeira Parte|Segunda Parte|Terceira Parte|Pré-Refrão|Pre-Refrão|Refrão|Coro|Ponte|Interlúdio|Final|Estrofe|Verso|\d+).*\]$/i.test(trimmed)) {
+      out.push(trimmed);
+      continue;
+    }
+    if (/^\[[^\]]+\]$/.test(trimmed)) continue;
+
+    const tokens = trimmed.split(/\s+/).filter(Boolean);
+    const chordCount = tokens.filter(isChordWord).length;
+    // Se a linha tiver 50% ou mais de acordes, é linha de cifra — descarta para o cantor!
+    const isChordOnly = chordCount >= tokens.length * 0.5 || tokens.every(isChordWord);
+    if (!isChordOnly) {
+      const cleanLine = trimmed
+        .replace(/\[[A-G][#b]?(?:[a-zA-Z0-9#+°ø\(\)\-\^~]*)?(?:\/[A-G][#b]?)?\]/g, "")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+      if (cleanLine) out.push(cleanLine);
+    }
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function groupLyricsIntoStanzas(cleanText) {
+  const lines = cleanText.split(/\r?\n/).map((l) => l.trim());
+  const stanzas = [];
+  let curStanza = { tag: "", lines: [] };
+
+  for (const line of lines) {
+    if (!line) {
+      if (curStanza.lines.length > 0) {
+        stanzas.push(curStanza);
+        curStanza = { tag: "", lines: [] };
+      }
+      continue;
+    }
+    const tagMatch = line.match(/^\[(Primeira Parte|Segunda Parte|Terceira Parte|Pré-Refrão|Pre-Refrão|Refrão|Coro|Ponte|Interlúdio|Final|Estrofe|Verso|\d+).*\]$/i);
+    if (tagMatch) {
+      if (curStanza.lines.length > 0) {
+        stanzas.push(curStanza);
+      }
+      curStanza = { tag: tagMatch[1], lines: [] };
+      continue;
+    }
+    curStanza.lines.push(line);
+  }
+  if (curStanza.lines.length > 0) stanzas.push(curStanza);
+  return stanzas;
+}
+
+function buildCantorLyricsHtml(s) {
+  const pureLyrics = cleanSingerLyrics(s.lyrics || s.cifra || "");
+  if (!pureLyrics) return '<div class="empty">Letra indisponível.</div>';
+
+  const stanzas = groupLyricsIntoStanzas(pureLyrics);
+  return stanzas
+    .map((st) => {
+      let tagHtml = "";
+      if (st.tag) {
+        const isCho = /refrão|coro/i.test(st.tag);
+        const icon = isCho ? "🎶" : /ponte/i.test(st.tag) ? "🌉" : /final/i.test(st.tag) ? "✨" : "📖";
+        tagHtml = `<span class="hymn-chorus-tag">${icon} ${escapeHtml(st.tag)}</span>`;
+      }
+
+      const stanzaText = st.lines.join("\n");
+      const isChorus = /refrão|coro/i.test(st.tag) || (s.isHarpa && isChorusStanza(stanzaText));
+
+      return `
+        <div class="cantor-block ${isChorus ? "is-chorus" : ""}">
+          ${tagHtml}
+          ${escapeHtml(stanzaText)}
+        </div>
+      `;
+    })
+    .join("");
+}
+
 // Renderização dos 4 Modos da Banda
 function renderCurrentBandView() {
   if (!curSongData) return;
@@ -2195,14 +2288,8 @@ function renderCurrentBandView() {
 
   const isFav = s.isHarpa ? harpaFavs.includes(s.n) : false;
 
-  // Letra formatada para o Cantor
-  const stanzas = s.lyrics.split(/\n\n+/);
-  const cantorLyricsHtml = stanzas
-    .map((st) => {
-      const isChorus = isChorusStanza(st) || /coro|refrão/i.test(st);
-      return `<div class="cantor-block ${isChorus ? "is-chorus" : ""}">${isChorus ? '<span class="hymn-chorus-tag">🎶 Coro</span>' : ""}${escapeHtml(st)}</div>`;
-    })
-    .join("");
+  // Letra 100% LIMPA para o Cantor (Zero acordes!)
+  const cantorLyricsHtml = buildCantorLyricsHtml(s);
 
   const youtubePlayerHtml = buildYoutubePlayerHtml(s);
   const activeYtId = s.youtubeId || localStorage.getItem("worship_yt_" + s.id) || null;

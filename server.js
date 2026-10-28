@@ -319,7 +319,13 @@ function decodeHtmlEntities(str) {
 }
 
 function isChordToken(tok) {
-  return /^[A-G][#b]?(?:m|maj|min|dim|aug|sus|add|7M|7|9|11|13|6|5|4|2|M|\d|[+\-\/()])*$/.test(tok);
+  return (
+    /^[A-G][#b]?(?:[a-zA-Z0-9#+°ø\(\)\-\^~]*)?(?:\/[A-G][#b]?)?$/.test(tok) ||
+    tok === "|" ||
+    tok === "/" ||
+    tok === "%" ||
+    /^\(\d+x\)$/i.test(tok)
+  );
 }
 
 function extractLyricsFromCifra(cifraText) {
@@ -333,14 +339,21 @@ function extractLyricsFromCifra(cifraText) {
     }
     if (/^\[(Tom|Intro|Tab|Solo|Capotraste|Acordes)/i.test(trimmed)) continue;
     if (/^[EBGDAEebgdae]\|[-0-9hpb/~\s|xX]+/.test(trimmed)) continue;
-    if (/^\[[^\]]+\]$/.test(trimmed)) {
+    if (/^\[(Primeira Parte|Segunda Parte|Terceira Parte|Pré-Refrão|Pre-Refrão|Refrão|Coro|Ponte|Interlúdio|Final|Estrofe|Verso).*\]$/i.test(trimmed)) {
       out.push(trimmed);
       continue;
     }
-    const tokens = trimmed.split(/\s+/);
-    const isChordLine = tokens.every((t) => isChordToken(t) || t === "|" || t === "/" || /^\(\d+x\)$/i.test(t));
+    if (/^\[[^\]]+\]$/.test(trimmed)) continue;
+
+    const tokens = trimmed.split(/\s+/).filter(Boolean);
+    const chordCount = tokens.filter(isChordToken).length;
+    const isChordLine = chordCount >= tokens.length * 0.5 || tokens.every(isChordToken);
     if (!isChordLine) {
-      out.push(trimmed);
+      const cleanLine = trimmed
+        .replace(/\[[A-G][#b]?(?:[a-zA-Z0-9#+°ø\(\)\-\^~]*)?(?:\/[A-G][#b]?)?\]/g, "")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+      if (cleanLine) out.push(cleanLine);
     }
   }
   return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
