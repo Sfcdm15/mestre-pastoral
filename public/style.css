@@ -17,7 +17,7 @@
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html, body { height: 100%; margin: 0; }
+html, body { height: 100%; margin: 0; padding: 0; width: 100%; }
 body {
   font-family: "Inter", system-ui, sans-serif;
   background: radial-gradient(circle at top, #fdf9f2 0%, var(--bg) 70%);
@@ -25,8 +25,9 @@ body {
   display: flex;
   flex-direction: column;
   height: 100dvh;
-  max-width: 960px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   overflow: hidden;
 }
 button { font: inherit; }
@@ -864,15 +865,19 @@ a.bref:hover { background: var(--gold-soft); border-radius: 4px; }
 /* ---------- Responsivo para Computadores / Monitores (Desktop & Tablets Paisagem) ---------- */
 @media (min-width: 860px) {
   body {
-    max-width: 1280px;
-    box-shadow: 0 0 50px rgba(59, 42, 26, 0.08);
-    border-left: 1px solid rgba(231, 219, 198, 0.5);
-    border-right: 1px solid rgba(231, 219, 198, 0.5);
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 
   .topbar {
-    padding: 12px 28px;
-    gap: 18px;
+    padding: 14px 40px;
+    gap: 24px;
+    width: 100%;
+    background: rgba(255, 253, 249, 0.95);
+    backdrop-filter: blur(10px);
   }
 
   /* Oculta a barra de abas de celular no computador */
@@ -884,32 +889,31 @@ a.bref:hover { background: var(--gold-soft); border-radius: 4px; }
   .desktop-nav {
     display: flex !important;
     align-items: center;
-    gap: 4px;
-    background: rgba(255, 253, 249, 0.9);
+    gap: 6px;
+    background: rgba(248, 242, 231, 0.7);
     border: 1px solid var(--line);
     border-radius: 999px;
-    padding: 4px 6px;
-    box-shadow: 0 2px 10px rgba(59, 42, 26, 0.04);
+    padding: 5px 8px;
   }
 
   .desktop-nav .tab {
     border: 0;
     background: transparent;
-    padding: 7px 15px;
+    padding: 8px 18px;
     border-radius: 999px;
-    font-size: .86rem;
+    font-size: .9rem;
     font-weight: 600;
     color: var(--muted);
     display: inline-flex;
     flex-direction: row;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     cursor: pointer;
     transition: all .18s;
   }
 
   .desktop-nav .tab span {
-    font-size: 1.05rem;
+    font-size: 1.1rem;
     filter: none;
     transform: none !important;
   }
@@ -922,7 +926,7 @@ a.bref:hover { background: var(--gold-soft); border-radius: 4px; }
   .desktop-nav .tab.active {
     background: var(--brown);
     color: #fffdf9;
-    box-shadow: 0 3px 10px rgba(59, 42, 26, 0.22);
+    box-shadow: 0 3px 12px rgba(59, 42, 26, 0.22);
   }
 
   .desktop-nav .tab.active span {
@@ -938,91 +942,111 @@ a.bref:hover { background: var(--gold-soft); border-radius: 4px; }
     display: none;
   }
 
-  /* Página Inicial no Desktop */
+  /* Página Inicial em Tela Cheia no Desktop */
   .home {
-    padding: 24px 36px 48px;
-    gap: 24px;
+    padding: 28px 48px 60px;
+    gap: 28px;
+    width: 100%;
+    max-width: 100%;
   }
 
   .hero-card {
-    padding: 28px 34px;
+    padding: 32px 40px;
+    width: 100%;
   }
 
   .hero-top h2 {
-    font-size: 1.65rem;
+    font-size: 1.85rem;
   }
 
   .vod-box {
-    padding: 22px 26px;
+    padding: 24px 30px;
   }
 
   .vod-quote {
-    font-size: 1.25rem;
+    font-size: 1.3rem;
     line-height: 1.75;
   }
 
-  /* 4 cartões de atalhos dispostos em 4 colunas limpas */
+  /* 4 cartões de atalhos dispostos em 4 colunas em tela cheia */
   .dash-grid {
     grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
+    gap: 20px;
+    width: 100%;
   }
 
-  /* Leitor Bíblico com largura ideal de leitura */
+  .theme-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+
+  .books-strip {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+  }
+
+  /* Leitor Bíblico com largura confortável no Desktop */
   .reader-bar {
-    max-width: 900px;
+    max-width: 1200px;
     margin: 0 auto;
     width: 100%;
-    padding: 12px 24px;
+    padding: 14px 32px;
   }
 
   .reader {
-    max-width: 900px;
+    max-width: 1200px;
     margin: 0 auto;
     width: 100%;
-    padding: 16px 28px 50px;
+    padding: 20px 40px 60px;
   }
 
   /* Chat com o Mestre com largura confortável */
   .modes {
-    max-width: 860px;
+    max-width: 1000px;
     margin-left: auto;
     margin-right: auto;
     width: 100%;
   }
 
   .chat {
-    max-width: 860px;
+    max-width: 1000px;
     margin: 0 auto;
     width: 100%;
-    padding: 14px 24px 20px;
+    padding: 16px 32px 24px;
   }
 
   .composer {
-    max-width: 860px;
+    max-width: 1000px;
     margin-left: auto;
     margin-right: auto;
     width: 100%;
   }
 
-  /* Harpa Cristã */
+  /* Harpa Cristã aproveitando a tela toda */
   .harpa-container {
-    max-width: 1100px;
-    margin: 0 auto;
     width: 100%;
+    max-width: 100%;
+    padding: 0 40px;
+  }
+
+  .harpa-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
   }
 
   /* Busca Bíblica */
   .search-container {
-    max-width: 960px;
-    margin: 0 auto;
     width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 40px;
   }
 
   /* Telas de Oferta e Favoritos */
   .oferta-scroll, .favs-scroll {
-    max-width: 900px;
+    max-width: 1100px;
     margin: 0 auto;
     width: 100%;
-    padding: 24px 28px 60px;
+    padding: 28px 40px 60px;
   }
 }
