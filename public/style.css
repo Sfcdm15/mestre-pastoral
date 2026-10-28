@@ -438,6 +438,217 @@ button { font: inherit; }
   margin: 24px auto 10px; max-width: 560px;
 }
 
+/* Card de busca IA de qualquer louvor */
+.search-ai-louvor-card {
+  background: linear-gradient(135deg, #fffcf6 0%, #f9f0e1 100%);
+  border: 1.5px solid var(--gold);
+  border-radius: 18px;
+  padding: 22px 20px;
+  margin: 16px 0;
+  text-align: center;
+  box-shadow: 0 4px 18px rgba(196, 137, 59, 0.12);
+}
+
+/* Seletor de Modo da Banda (Cantor, Violão, Teclado, Bateria) */
+.band-mode-selector {
+  display: inline-flex;
+  align-items: center;
+  background: var(--gold-soft);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+}
+.bmode-btn {
+  border: 0;
+  background: transparent;
+  padding: 6px 13px;
+  border-radius: 999px;
+  font-size: .81rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .16s;
+}
+.bmode-btn:hover {
+  color: var(--brown);
+}
+.bmode-btn.active {
+  background: var(--brown);
+  color: #fffdf9;
+  box-shadow: 0 2px 8px rgba(59, 42, 26, 0.2);
+}
+
+/* Modo Cantor */
+.cantor-container {
+  max-width: 760px;
+  margin: 0 auto;
+}
+.cantor-meta-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 18px;
+  margin: 12px 0 20px;
+  font-size: .88rem;
+  color: var(--brown);
+  font-weight: 600;
+}
+.cantor-lyrics-box {
+  font-family: "Lora", serif;
+  font-size: 1.25rem;
+  line-height: 1.85;
+  color: var(--ink);
+}
+.cantor-block {
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  white-space: pre-line;
+}
+.cantor-block.is-chorus {
+  border-left: 4px solid var(--gold);
+  background: #fcf4e4;
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* Cartões Informativos de Instrumentos */
+.instrument-card {
+  background: #fbf5e8;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px 18px;
+  margin: 14px auto 18px;
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.instrument-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  color: var(--brown);
+  font-size: .95rem;
+}
+.instrument-card-body {
+  font-size: .88rem;
+  color: var(--ink);
+  line-height: 1.5;
+}
+.chord-pills-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.chord-note-pill {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px 9px;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--brown);
+}
+.chord-note-pill b {
+  color: var(--gold);
+  margin-right: 3px;
+}
+
+/* Modo Bateria e Metrônomo */
+.bateria-dashboard {
+  background: var(--paper);
+  border: 1.5px solid var(--line);
+  border-radius: 20px;
+  padding: 22px;
+  max-width: 760px;
+  margin: 16px auto 24px;
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+.metronome-visual-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 18px 0;
+}
+.metronome-beat-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #e7dbc6;
+  transition: transform .08s, background .08s, box-shadow .08s;
+}
+.metronome-beat-dot.flash-one {
+  background: #c4893b;
+  transform: scale(1.35);
+  box-shadow: 0 0 14px #c4893b;
+}
+.metronome-beat-dot.flash-sub {
+  background: #3b2a1a;
+  transform: scale(1.2);
+  box-shadow: 0 0 10px #3b2a1a;
+}
+.bpm-display {
+  font-family: "Lora", serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--brown);
+  margin: 4px 0;
+}
+.bpm-label {
+  font-size: .8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+}
+.bpm-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+.btn-metronome-toggle {
+  background: var(--brown);
+  color: #fffdf9;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 24px;
+  font-size: .92rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(59, 42, 26, 0.2);
+  transition: transform .15s, background .15s;
+}
+.btn-metronome-toggle:hover {
+  background: var(--brown-deep);
+  transform: translateY(-1px);
+}
+.btn-metronome-toggle.active {
+  background: #c47c1a;
+}
+.drum-conduction-box {
+  text-align: left;
+  background: #fdfaf4;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  margin-top: 18px;
+  font-size: .88rem;
+  line-height: 1.55;
+}
+
 /* Cifras da Harpa Cristã */
 .hymn-mode-pill {
   display: inline-flex;

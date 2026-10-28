@@ -45,6 +45,7 @@ const MODE_HINTS = {
   estudo: "[O usuário escolheu o MÓDULO DE ESTUDO — use o FLUXO 1]\n",
   duvida: "[O usuário escolheu o MINI-CHAT DE DÚVIDAS — use o FLUXO 2]\n",
   cifra: "[O usuário solicitou a CIFRA MUSICAL deste hino da Harpa Cristã — use o FLUXO 3: informe o Tom, a Intro e a letra cifrada completa]\n",
+  louvor: "[O usuário solicitou o GUIA COMPLETO DE LOUVOR PARA A BANDA DA IGREJA — use o FLUXO 4: [METADADOS], [LETRA], e [CIFRA] completa]\n",
 };
 
 const MIME = {

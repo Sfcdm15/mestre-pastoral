@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-title" content="Mestre Pastoral" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=9" />
+  <link rel="stylesheet" href="style.css?v=10" />
 </head>
 <body>
   <header class="topbar">
@@ -193,11 +193,12 @@
   <section id="view-harpa" class="view" hidden>
     <div id="harpaIndexView" class="harpa-container">
       <form id="harpaSearchForm" class="harpa-search-bar">
-        <input id="harpaSearchInput" type="search" placeholder="Digite o número (ex.: 39) ou nome do hino (ex.: Chuvas de Graça)…" autocomplete="off" />
+        <input id="harpaSearchInput" type="search" placeholder="Buscar hino da Harpa ou qualquer louvor (ex: Bondade de Deus, A Casa É Sua, Hino 15)…" autocomplete="off" />
         <button type="submit" class="btn-primary">🔍 Pesquisar</button>
       </form>
       <div id="harpaFilters" class="harpa-filters">
-        <button type="button" class="pill active" data-range="ALL">Todos (524)</button>
+        <button type="button" class="pill active" data-range="ALL">Harpa (524)</button>
+        <button type="button" class="pill" data-range="LOUVORES">🎸 Louvores da Igreja</button>
         <button type="button" class="pill" data-range="1-100">1–100</button>
         <button type="button" class="pill" data-range="101-200">101–200</button>
         <button type="button" class="pill" data-range="201-300">201–300</button>
@@ -212,15 +213,17 @@
 
     <div id="harpaReaderView" class="harpa-container" hidden>
       <div class="reader-bar">
-        <button id="harpaBackBtn" class="ghost" type="button">‹ Índice</button>
-        <div class="hymn-mode-pill" role="tablist">
-          <button type="button" class="hmode-btn active" id="btnHymnLyrics" title="Ver letra do hino">📖 Letra</button>
-          <button type="button" class="hmode-btn" id="btnHymnCifra" title="Ver hino com cifras para violão e teclado">🎸 Cifra</button>
+        <button id="harpaBackBtn" class="ghost" type="button">‹ Voltar</button>
+        <div class="band-mode-selector" role="tablist">
+          <button type="button" class="bmode-btn active" data-bmode="cantor" title="Modo Cantor: Letra limpa e grande">🎤 Cantor</button>
+          <button type="button" class="bmode-btn" data-bmode="violao" title="Modo Violão / Guitarra: Cifras e batida">🎸 Violão</button>
+          <button type="button" class="bmode-btn" data-bmode="teclado" title="Modo Teclado: Cifras e notas dos acordes">🎹 Teclado</button>
+          <button type="button" class="bmode-btn" data-bmode="bateria" title="Modo Bateria: Andamento BPM e metrônomo">🥁 Bateria</button>
         </div>
         <div style="flex:1"></div>
-        <button id="harpaPrevBtn" class="icon-btn" type="button" aria-label="Hino anterior">‹</button>
-        <button id="harpaNextBtn" class="icon-btn" type="button" aria-label="Próximo hino">›</button>
-        <button id="harpaStudyBtn" class="study-btn" type="button" title="Meditar neste hino com o Mestre Pastoral">☕ Meditar</button>
+        <button id="harpaPrevBtn" class="icon-btn" type="button" aria-label="Anterior">‹</button>
+        <button id="harpaNextBtn" class="icon-btn" type="button" aria-label="Próximo">›</button>
+        <button id="harpaStudyBtn" class="study-btn" type="button" title="Meditar nesta mensagem com o Mestre Pastoral">☕ Meditar</button>
       </div>
       <div id="harpaReader" class="reader scroll"></div>
 
@@ -434,7 +437,7 @@
 
   <div id="toast" class="toast" hidden></div>
 
-  <script src="app.js?v=9"></script>
-  <script src="bible.js?v=9"></script>
+  <script src="app.js?v=10"></script>
+  <script src="bible.js?v=10"></script>
 </body>
 </html>

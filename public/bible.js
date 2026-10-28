@@ -675,263 +675,253 @@ function showHarpaIndex() {
   renderHarpaList();
 }
 
-function renderHarpaList(submitTriggered = false) {
-  const listEl = $("#harpaList");
-  if (!HARPA) {
-    listEl.innerHTML = `<div class="loading">Carregando os 524 hinos da Harpa Cristã…</div>`;
-    return;
-  }
-
-  const rawQ = ($("#harpaSearchInput").value || "").trim();
-  const numMatch = rawQ.match(/^(?:hino\s*|n[º°]?\s*|#)?(\d{1,3})$/i);
-  const exactNum = numMatch ? Number(numMatch[1]) : null;
-
-  // Se o usuário digitou um número exato e clicou em "Pesquisar" (Enter), abre o hino direto!
-  if (submitTriggered && exactNum && exactNum >= 1 && exactNum <= HARPA.length) {
-    openHymn(exactNum);
-    return;
-  }
-
-  const nq = norm(rawQ);
-  const favSet = new Set(harpaFavs);
-  let filtered = HARPA;
-
-  if (rawQ) {
-    if (exactNum) {
-      // Prioriza o hino de número exato, seguido pelos que contêm esses dígitos no número
-      const exact = HARPA.filter((h) => h.n === exactNum);
-      const partial = HARPA.filter((h) => h.n !== exactNum && String(h.n).includes(String(exactNum)));
-      filtered = [...exact, ...partial];
-    } else {
-      // Pesquisa por nome do hino (prioridade) ou trecho da letra
-      const byTitle = [];
-      const byLyrics = [];
-      for (const h of HARPA) {
-        if (String(h.n) === rawQ || h.normTitle.includes(nq)) byTitle.push(h);
-        else if (nq.length >= 2 && h.normLyrics.includes(nq)) byLyrics.push(h);
-      }
-      filtered = [...byTitle, ...byLyrics];
-    }
-  } else if (curHarpaRange === "FAV") {
-    filtered = HARPA.filter((h) => favSet.has(h.n));
-  } else if (curHarpaRange !== "ALL") {
-    const [min, max] = curHarpaRange.split("-").map(Number);
-    filtered = HARPA.filter((h) => h.n >= min && h.n <= max);
-  }
-
-  if (!filtered.length) {
-    listEl.innerHTML =
-      curHarpaRange === "FAV" && !rawQ
-        ? `<p class="empty">Você ainda não favoritou nenhum hino.<br>Abra um hino e toque em ⭐ Favoritar.</p>`
-        : `<p class="empty">Nenhum hino encontrado para “${escapeHtml(rawQ)}”.<br>Tente buscar pelo número (1 a 524) ou por palavras do título.</p>`;
-    return;
-  }
-
-  let html = "";
-  if (exactNum && exactNum >= 1 && exactNum <= HARPA.length) {
-    const target = HARPA.find((h) => h.n === exactNum);
-    if (target) {
-      html += `<button type="button" class="goto" data-hymn="${target.n}">🎵 Abrir Hino ${target.n} — ${escapeHtml(target.title)}</button>`;
-    }
-  }
-
-  html += `<p class="count">${filtered.length} hino(s) ${rawQ ? `encontrado(s) para “${escapeHtml(rawQ)}”` : "na lista"}</p><div class="harpa-grid">`;
-  for (const h of filtered) {
-    const titleHtml = nq && !exactNum && h.normTitle.includes(nq) ? highlight(h.title, h.normTitle, nq) : escapeHtml(h.title);
-    const star = favSet.has(h.n) ? `<span class="harpa-star" title="Favorito">★</span>` : "";
-    html += `<button type="button" class="harpa-card" data-hymn="${h.n}">
-      <div class="harpa-num">${h.n}</div>
-      <div class="harpa-info">
-        <div class="harpa-title">${titleHtml}</div>
-        <div class="harpa-snip">${escapeHtml(h.firstLine)}</div>
-      </div>
-      ${star}
-    </button>`;
-  }
-  html += `</div>`;
-  listEl.innerHTML = html;
-  listEl.scrollTop = 0;
-}
-
+// ---------- Central de Louvor para a Banda da Igreja ----------
+const WORSHIP_STORAGE_KEY = "mestre-pastoral:worship-library";
 const CIFRA_STORAGE_PREFIX = "mestre-pastoral:cifra:";
-let curHymnTab = "lyrics"; // 'lyrics' | 'cifra'
+
+let curBandMode = "cantor"; // 'cantor' | 'violao' | 'teclado' | 'bateria'
+let curSongData = null; // objeto normalizado da música atual
 let curCifraSemitones = 0;
 let curCifraFontSize = 15;
 let cifraAutoScrollTimer = null;
 let isCifraAutoScrolling = false;
 
+// Metrônomo para Bateria
+let metronomeTimer = null;
+let isMetronomeRunning = false;
+let currentBeatIndex = 0;
+let audioCtx = null;
+
 const NOTES_SHARP = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const NOTES_FLAT  = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
 
+const CHORD_NOTES_MAP = {
+  "C": "Dó - Mi - Sol",
+  "Cm": "Dó - Mib - Sol",
+  "C7": "Dó - Mi - Sol - Sib",
+  "C9": "Dó - Mi - Sol - Ré",
+  "C#": "Dó# - Fá - Sol#",
+  "C#m": "Dó# - Mi - Sol#",
+  "Db": "Réb - Fá - Láb",
+  "D": "Ré - Fá# - Lá",
+  "Dm": "Ré - Fá - Lá",
+  "D7": "Ré - Fá# - Lá - Dó",
+  "D9": "Ré - Mi - Fá# - Lá",
+  "D#": "Ré# - Sol - Lá#",
+  "D#m": "Ré# - Fá# - Lá#",
+  "Eb": "Mib - Sol - Sib",
+  "E": "Mi - Sol# - Si",
+  "Em": "Mi - Sol - Si",
+  "E7": "Mi - Sol# - Si - Ré",
+  "F": "Fá - Lá - Dó",
+  "Fm": "Fá - Láb - Dó",
+  "F#": "Fá# - Lá# - Dó#",
+  "F#m": "Fá# - Lá - Dó#",
+  "F#7": "Fá# - Lá# - Dó# - Mi",
+  "Gb": "Solb - Sib - Réb",
+  "G": "Sol - Si - Ré",
+  "Gm": "Sol - Sib - Ré",
+  "G7": "Sol - Si - Ré - Fá",
+  "G9": "Sol - Lá - Si - Ré",
+  "G#": "Sol# - Dó - Ré#",
+  "G#m": "Sol# - Si - Ré#",
+  "Ab": "Láb - Dó - Mib",
+  "A": "Lá - Dó# - Mi",
+  "Am": "Lá - Dó - Mi",
+  "A7": "Lá - Dó# - Mi - Sol",
+  "A9": "Lá - Si - Dó# - Mi",
+  "A#": "Lá# - Ré - Fá",
+  "A#m": "Lá# - Dó# - Fá",
+  "Bb": "Sib - Ré - Fá",
+  "B": "Si - Ré# - Fá#",
+  "Bm": "Si - Ré - Fá#",
+  "B7": "Si - Ré# - Fá# - Lá"
+};
+
+const BUILTIN_LOUVORES = [
+  {
+    id: "louvor:bondade-de-deus",
+    title: "Bondade de Deus",
+    artist: "Isaías Saad",
+    tom: "G",
+    bpm: 70,
+    compasso: "4/4",
+    estilo: "Worship / Balada",
+    batidaViolao: "Dedilhado suave nas estrofes (P-i-m-a); batida 4/4 crescente no refrão (↓  ↓↑  ↑↓↑)",
+    teclado: "Pad atmosférico sustentando a harmonia; piano com notas de apoio e arpejos nas passagens",
+    bateria: "Verso 1 em silêncio; verso 2 entra com bumbo macio e tom-tons; refrão com condução no prato e bumbo marcante",
+    lyrics: `Te amarei, Senhor, Tua graça nunca falha
+Todos os meus dias em Tuas mãos estão
+Desde o amanhecer até o sol se pôr
+Eu cantarei da bondade de Deus
+
+És fiel em todo o tempo
+Em todo o tempo Tu és tão, tão bom
+Com todo o fôlego que tenho
+Eu cantarei da bondade de Deus
+
+Tua voz me guia através do fogo
+Na escuridão, Tua presença é paz
+Eu Te conheço como Pai e amigo
+Eu tenho vivido na bondade de Deus
+
+Tua bondade me seguirá, me seguirá, Senhor
+Tua bondade me seguirá, me seguirá, Senhor
+Eu me rendo a Ti, Te dou o meu ser
+Entrego tudo a Ti`,
+    cifra: `[Tom: G]
+
+[Intro: G  C  G  C]
+
+       G             C
+Te amarei, Senhor, Tua graça nunca falha
+       G                      D
+Todos os meus dias em Tuas mãos estão
+               Em         C
+Desde o amanhecer até o sol se pôr
+       G      D         G
+Eu cantarei da bondade de Deus
+
+[Coro]
+ C                      G
+És fiel em todo o tempo
+ C                     G           D
+Em todo o tempo Tu és tão, tão bom
+ C                       Em
+Com todo o fôlego que tenho
+       G      D         G
+Eu cantarei da bondade de Deus
+
+         G               C
+Tua voz me guia através do fogo
+        G                   D
+Na escuridão, Tua presença é paz
+          Em             C
+Eu Te conheço como Pai e amigo
+        G       D          G
+Eu tenho vivido na bondade de Deus
+
+[Ponte]
+       C                 D
+Tua bondade me seguirá, me seguirá, Senhor
+       C                 D
+Tua bondade me seguirá, me seguirá, Senhor
+       G/B            C
+Eu me rendo a Ti, Te dou o meu ser
+       D             G
+Entrego tudo a Ti`
+  },
+  {
+    id: "louvor:a-casa-e-sua",
+    title: "A Casa É Sua",
+    artist: "Casa Worship",
+    tom: "G",
+    bpm: 68,
+    compasso: "4/4",
+    estilo: "Worship Contemporâneo",
+    batidaViolao: "Dedilhado no verso; batida worship com dinâmica crescente a partir do refrão",
+    teclado: "Ambiência com Pad em Sol e notas em oitavas no piano",
+    bateria: "Começa suave com aro de caixa e bumbo discreto; explosão dinâmica na ponte e refrão final",
+    lyrics: `Você é bem-vindo aqui, a casa é Sua, pode entrar
+Me esvazio de mim, me esvazio de mim
+Sopra Teu vento aqui, toma o Teu lugar
+Me esvazio de mim, me esvazio de mim
+
+Essa casa é Sua casa, nós deixamos ela pra Você, Jesus
+Essa casa é Sua casa, nós deixamos ela pra Você, Jesus
+Apareça, que o Teu nome cresça
+Enche este lugar, enche este lugar`,
+    cifra: `[Tom: G]
+
+[Intro: G  C  Em  D]
+
+       G                             C
+Você é bem-vindo aqui, a casa é Sua, pode entrar
+       Em            D
+Me esvazio de mim, me esvazio de mim
+       G                           C
+Sopra Teu vento aqui, toma o Teu lugar
+       Em            D
+Me esvazio de mim, me esvazio de mim
+
+[Coro]
+      C                 G
+Essa casa é Sua casa, nós deixamos ela pra Você, Jesus
+      Em                D
+Essa casa é Sua casa, nós deixamos ela pra Você, Jesus
+     C              G
+Apareça, que o Teu nome cresça
+     Em             D
+Enche este lugar, enche este lugar`
+  },
+  {
+    id: "louvor:raridade",
+    title: "Raridade",
+    artist: "Anderson Freire",
+    tom: "G",
+    bpm: 72,
+    compasso: "4/4",
+    estilo: "Balada Gospel",
+    batidaViolao: "Batida pop/balada (↓  ↓↑  ↑↓↑)",
+    teclado: "Arpejos clássicos de piano gospel e cordas/strings de fundo",
+    bateria: "Caixa no tempo 2 e 4 com bumbo firme no tempo 1",
+    lyrics: `Não consigo ir além do Teu olhar
+Tudo o que eu consigo é me apaixonar
+Chego a pensar que o Teu amor por mim é uma ilusão
+Eu não consigo entender
+
+Você é um espelho que reflete a imagem do Senhor
+Não chore se o mundo ainda não notou
+Já é o bastante Deus reconhecer o seu valor
+Você é precioso, mais raro que o ouro puro de Ofir
+Se você desistiu, Deus não vai desistir
+Você é uma joia que o Senhor fez com as próprias mãos`,
+    cifra: `[Tom: G]
+
+[Intro: G  D/F#  Em  C]
+
+       G              D/F#
+Não consigo ir além do Teu olhar
+       Em               C
+Tudo o que eu consigo é me apaixonar
+       G             D/F#
+Chego a pensar que o Teu amor por mim
+       Em               C
+É uma ilusão, eu não consigo entender
+
+[Coro]
+       G                       D/F#
+Você é um espelho que reflete a imagem do Senhor
+       Em                      C
+Não chore se o mundo ainda não notou
+       G                       D/F#
+Já é o bastante Deus reconhecer o seu valor
+       Em                      C
+Você é precioso, mais raro que o ouro puro de Ofir
+       G               D/F#
+Se você desistiu, Deus não vai desistir
+       Em            C
+Você é uma joia que o Senhor fez!`
+  }
+];
+
+function getWorshipLibrary() {
+  const custom = loadJSON(WORSHIP_STORAGE_KEY, []);
+  return [...BUILTIN_LOUVORES, ...custom];
+}
+
+function saveCustomWorship(song) {
+  const list = loadJSON(WORSHIP_STORAGE_KEY, []).filter((s) => s.id !== song.id);
+  list.unshift(song);
+  localStorage.setItem(WORSHIP_STORAGE_KEY, JSON.stringify(list));
+}
+
 const BUILTIN_CIFRAS = {
-  1: `[Tom: G]
-
-[Intro: G  D  C  D  G]
-
-      G
-1. Deus prometeu com certeza
-                  D
-Chuvas de graça mandar;
-       G
-Ele nos dá fortaleza
-  C          D         G
-E ricas bênçãos sem par.
-
-[Coro]
-           D
-Chuvas de graça,
-  C        D      G
-Chuvas pedimos, Senhor!
-             C
-Manda-nos já chuvas mansas,
- G         D       G
-Chuvas do Consolador!
-
-       G
-2. Cristo nos dá a promessa
-                   D
-Do santo fogo do além;
-         G
-Que o coração nos aqueça,
-     C         D       G
-Com bênçãos puras também.
-
-        G
-3. Dá-nos, Senhor, amplamente,
-                  D
-Tua divina unção;
-       G
-Manda a chuva celeste,
-  C          D        G
-Que traz avivamento ao chão.`,
-
-  6: `[Tom: G]
-
-[Intro: G  D  Em  C  G  D  G]
-
-      G                D
-1. Tu na maldição da cruz,
-      C         D    G
-Elevaste o Teu amor,
-                   D
-Em rogar, Senhor Jesus:
-        C       D       G
-"Pai, perdoa ao transgressor!"
-
-[Coro]
- G
-Queres, queres, com vigor,
-       C          D
-Muitas almas despertar;
- G
-Queres, queres, ó Senhor!
-       C         D   G
-Transformar, remir, curar;
-     C          G
-Oh! sim!   Oh! sim!
-        D            G
-Queres todos renovar!
-
-      G            D
-2. O Maligno tentador
-      C       D      G
-É o autor da perdição,
-                    D
-Do pecado, mal e a dor,
-      C       D     G
-Da doença e da aflição.
-
-        G              D
-3. Tu levaste, ó bom Jesus,
-      C       D      G
-O pecado, o mal e a dor,
-                   D
-E a doença sobre a cruz;
-      C        D     G
-És o grande Salvador!
-
-       G               D
-4. Deus é bom, quer sempre o bem
-       C    D     G
-Do oprimido pecador;
-                   D
-Mal nenhum em Si Deus tem:
-       C         D      G
-"Deus é luz, Deus é amor!"`,
-
-  15: `[Tom: E]
-
-[Intro: E  B7  A  B7  E]
-
-       E
-1. Oh! Quão cego andei e perdido vaguei,
-                           B7
-Longe, longe do meu Salvador!
-        E               A
-Mas da glória desceu e seu sangue verteu
-         E         B7       E
-Pra salvar um tão pobre pecador.
-
-[Coro]
-        E                      B7
-Foi na cruz, foi na cruz onde um dia eu vi
-       A        B7        E
-Meu pecado castigado em Jesus;
-        A                    E
-Foi ali pela fé que meus olhos abri,
-       E        B7          E
-E agora me alegro em sua luz!
-
-       E
-2. Eu ouvia falar dessa graça sem fim,
-                           B7
-Que do céu trouxe nosso Jesus;
-       E                 A
-Mas eu era rebelde, e dizia pra mim:
-       E       B7         E
-"Não desejo a morte da cruz".`,
-
-  187: `[Tom: G]
-
-[Intro: G  D  C  G  D  G]
-
-       G   C        G
-1. Mais perto quero estar,
-            D
-Meu Deus, de Ti!
-     G   C        G
-Inda que seja a dor
-    D      G
-Que me una a Ti,
-       C         G
-Sempre hei de suplicar:
-        G   C        G
-Mais perto quero estar,
-     D       G
-Mais perto, ó Deus, de Ti!`,
-
-  545: `[Tom: G]
-
-[Intro: G  C  G  D  G]
-
-      G           C
-1. Deus enviou seu Filho amado
-      G               D
-Para morrer no meu lugar;
-        G           C
-Na cruz pagou por meus pecados,
-        G     D          G
-Mas vivo está e vida eterna dá.
-
-[Coro]
-           G           C
-Porque Ele vive, posso crer no amanhã,
-           G           D
-Porque Ele vive, temor não há;
-         G            C
-Mas eu bem sei, eu sei, que a minha vida
-         G      D            G
-Está nas mãos do meu Jesus, que vivo está!`
+  1: `[Tom: G]\n\n[Intro: G  D  C  D  G]\n\n      G\n1. Deus prometeu com certeza\n                  D\nChuvas de graça mandar;\n       G\nEle nos dá fortaleza\n  C          D         G\nE ricas bênçãos sem par.\n\n[Coro]\n           D\nChuvas de graça,\n  C        D      G\nChuvas pedimos, Senhor!\n             C\nManda-nos já chuvas mansas,\n G         D       G\nChuvas do Consolador!`,
+  6: `[Tom: G]\n\n[Intro: G  D  Em  C  G  D  G]\n\n      G                D\n1. Tu na maldição da cruz,\n      C         D    G\nElevaste o Teu amor,\n                   D\nEm rogar, Senhor Jesus:\n        C       D       G\n"Pai, perdoa ao transgressor!"\n\n[Coro]\n G\nQueres, queres, com vigor,\n       C          D\nMuitas almas despertar;\n G\nQueres, queres, ó Senhor!\n       C         D   G\nTransformar, remir, curar;\n     C          G\nOh! sim!   Oh! sim!\n        D            G\nQueres todos renovar!`,
+  15: `[Tom: E]\n\n[Intro: E  B7  A  B7  E]\n\n       E\n1. Oh! Quão cego andei e perdido vaguei,\n                           B7\nLonge, longe do meu Salvador!\n        E               A\nMas da glória desceu e seu sangue verteu\n         E         B7       E\nPra salvar um tão pobre pecador.\n\n[Coro]\n        E                      B7\nFoi na cruz, foi na cruz onde um dia eu vi\n       A        B7        E\nMeu pecado castigado em Jesus;\n        A                    E\nFoi ali pela fé que meus olhos abri,\n       E        B7          E\nE agora me alegro em sua luz!`,
+  187: `[Tom: G]\n\n[Intro: G  D  C  G  D  G]\n\n       G   C        G\n1. Mais perto quero estar,\n            D\nMeu Deus, de Ti!\n     G   C        G\nInda que seja a dor\n    D      G\nQue me una a Ti,\n       C         G\nSempre hei de suplicar:\n        G   C        G\nMais perto quero estar,\n     D       G\nMais perto, ó Deus, de Ti!`,
+  545: `[Tom: G]\n\n[Intro: G  C  G  D  G]\n\n      G           C\n1. Deus enviou seu Filho amado\n      G               D\nPara morrer no meu lugar;\n        G           C\nNa cruz pagou por meus pecados,\n        G     D          G\nMas vivo está e vida eterna dá.\n\n[Coro]\n           G           C\nPorque Ele vive, posso crer no amanhã,\n           G           D\nPorque Ele vive, temor não há;\n         G            C\nMas eu bem sei, eu sei, que a minha vida\n         G      D            G\nEstá nas mãos do meu Jesus, que vivo está!`
 };
 
 function transposeNote(note, semitones) {
@@ -983,7 +973,7 @@ function formatCifraHTML(cifraText) {
       const line = escapeHtml(rawLine);
       const trimmed = line.trim();
       if (!trimmed) return "<br>";
-      if (/^\[(Tom|Intro|Coro|Estrofe|\d+).*\]$/i.test(trimmed)) {
+      if (/^\[(Tom|Intro|Coro|Estrofe|Ponte|\d+).*\]$/i.test(trimmed)) {
         return `<span class="chord-header">${line}</span>`;
       }
       const words = trimmed.split(/\s+/).filter(Boolean);
@@ -1002,6 +992,74 @@ function extractCifraKey(rawText, semitones = 0) {
   const m = rawText.match(/\[Tom:\s*([A-G][#b]?m?)\]/i) || rawText.match(/\b([A-G][#b]?m?)\b/);
   const base = m ? m[1] : "G";
   return transposeChord(base, semitones);
+}
+
+function extractUniqueChords(cifraText) {
+  const chordTokenRegex = /\b([A-G][#b]?(?:m|maj|min|dim|aug|sus[24]?|[2-9]|1[13])*(?:\/[A-G][#b]?)?)\b/g;
+  const set = new Set();
+  let m;
+  while ((m = chordTokenRegex.exec(cifraText)) !== null) {
+    const raw = m[1].split("/")[0]; // remove baixo
+    set.add(raw);
+  }
+  return Array.from(set).slice(0, 8);
+}
+
+// Metrônomo Áudio & Visual
+function playMetronomeTick(isFirst) {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.frequency.value = isFirst ? 1100 : 800;
+    gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.04);
+  } catch {}
+}
+
+function startMetronome(bpm = 70, beatsPerBar = 4) {
+  stopMetronome();
+  isMetronomeRunning = true;
+  currentBeatIndex = 0;
+  const intervalMs = (60 / bpm) * 1000;
+
+  const btn = $("#btnToggleMetronome");
+  if (btn) {
+    btn.classList.add("active");
+    btn.textContent = "⏸ Pausar Metrônomo";
+  }
+
+  function tick() {
+    const dots = document.querySelectorAll(".metronome-beat-dot");
+    dots.forEach((d, i) => {
+      d.classList.remove("flash-one", "flash-sub");
+      if (i === currentBeatIndex) {
+        d.classList.add(i === 0 ? "flash-one" : "flash-sub");
+      }
+    });
+    playMetronomeTick(currentBeatIndex === 0);
+    currentBeatIndex = (currentBeatIndex + 1) % beatsPerBar;
+  }
+
+  tick();
+  metronomeTimer = setInterval(tick, intervalMs);
+}
+
+function stopMetronome() {
+  if (metronomeTimer) clearInterval(metronomeTimer);
+  metronomeTimer = null;
+  isMetronomeRunning = false;
+  const btn = $("#btnToggleMetronome");
+  if (btn) {
+    btn.classList.remove("active");
+    btn.textContent = "▶ Ligar Metrônomo";
+  }
+  document.querySelectorAll(".metronome-beat-dot").forEach((d) => d.classList.remove("flash-one", "flash-sub"));
 }
 
 function toggleCifraAutoScroll() {
@@ -1030,23 +1088,85 @@ function toggleCifraAutoScroll() {
   }
 }
 
-async function generateCifraWithAI(h) {
-  const container = $("#cifraViewContainer");
-  if (container) {
-    container.innerHTML = `<div class="loading">🎼 O Mestre Pastoral está harmonizando o Hino ${h.n} para violão e teclado... Aguarde alguns instantes.</div>`;
-  }
+function openCifraModal(song, text) {
+  const modal = $("#cifraEditModal");
+  if (!modal) return;
+  $("#cifraEditTitle").textContent = `Cifra: ${song.title}`;
+  $("#cifraEditText").value = text || song.cifra || `[Tom: G]\n\n[Intro: G  D  C  D  G]\n\n      G\n1. ...`;
+  modal.hidden = false;
+  $("#cifraEditText").focus();
+}
+
+function parseAIWorshipResponse(text, originalQuery) {
+  const metaMatch = text.match(/\[METADADOS\]([\s\S]*?)\[FIM_METADADOS\]/i);
+  const letraMatch = text.match(/\[LETRA\]([\s\S]*?)\[FIM_LETRA\]/i);
+  const cifraMatch = text.match(/\[CIFRA\]([\s\S]*?)\[FIM_CIFRA\]/i);
+
+  const metaText = metaMatch ? metaMatch[1] : "";
+  const getField = (field, fallback) => {
+    const m = metaText.match(new RegExp(`(?:${field})\\s*:\\s*(.+)`, "i"));
+    return m ? m[1].trim() : fallback;
+  };
+
+  const title = getField("Titulo", originalQuery || "Louvor Congregacional");
+  const artist = getField("Artista", "Ministério de Louvor");
+  const tom = getField("Tom", "G");
+  const bpm = Number(getField("BPM", "70")) || 70;
+  const compasso = getField("Compasso", "4/4");
+  const estilo = getField("Estilo", "Worship / Balada");
+  const batidaViolao = getField("Batida Violao|Batida", "Dedilhado suave nos versos, levada 4/4 crescente no refrão");
+  const teclado = getField("Teclado", "Pad ambiente sustentando acordes e piano acústico");
+  const bateria = getField("Bateria", "Condução suave no chimbal, bumbo no 1 e 3, crescer dinâmico no refrão");
+
+  const lyrics = letraMatch ? letraMatch[1].trim() : text.trim();
+  const cifra = cifraMatch ? cifraMatch[1].trim() : text.trim();
+
+  const id = "custom:" + norm(title).replace(/[^a-z0-9]+/g, "-");
+  return {
+    id,
+    isHarpa: false,
+    n: null,
+    title,
+    artist,
+    tom,
+    bpm,
+    compasso,
+    estilo,
+    batidaViolao,
+    teclado,
+    bateria,
+    lyrics,
+    cifra
+  };
+}
+
+async function generateAILouvor(query) {
+  setView("harpa");
+  $("#harpaIndexView").hidden = true;
+  $("#harpaReaderView").hidden = false;
+  stopMetronome();
+  if (isCifraAutoScrolling) toggleCifraAutoScroll();
+
+  const reader = $("#harpaReader");
+  reader.innerHTML = `
+    <h2>Buscando Louvor: “${escapeHtml(query)}”…</h2>
+    <div class="testament">O Mestre Pastoral está montando o arranjo completo para a banda</div>
+    <div class="loading" style="padding:40px 10px;text-align:center">
+      🎸 Gerando Letra para o Cantor, Cifras para Violão e Teclado, e Ritmo para a Bateria…<br>
+      <span style="font-size:.85rem;color:var(--muted)">Aguarde alguns segundos.</span>
+    </div>
+  `;
 
   try {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        mode: "cifra",
+        mode: "louvor",
         messages: [{
           role: "user",
-          text: `Gere a cifra musical do Hino ${h.n} (${h.title}) da Harpa Cristã para violão e teclado em tom tradicional para a igreja (G, C ou D). Siga o FLUXO 3: [Tom: X], [Intro: ...] e as estrofes e coro com acordes alinhados.`
-        }],
-        context: { ref: `Harpa Cristã — Hino ${h.n}: ${h.title}`, text: h.lyrics }
+          text: `Gere o guia completo do louvor ou hino '${query}' para a equipe de louvor da igreja. Siga obrigatoriamente o FLUXO 4: [METADADOS], [LETRA] e [CIFRA].`
+        }]
       })
     });
 
@@ -1054,170 +1174,289 @@ async function generateCifraWithAI(h) {
 
     const decoder = new TextDecoder();
     let result = "";
-    const readerStream = res.body.getReader();
+    const stream = res.body.getReader();
     while (true) {
-      const { done, value } = await readerStream.read();
+      const { done, value } = await stream.read();
       if (done) break;
       result += decoder.decode(value, { stream: true });
-      if (container) container.textContent = result;
     }
 
     if (result.trim()) {
-      localStorage.setItem(CIFRA_STORAGE_PREFIX + h.n, result.trim());
-      toast("Cifra gerada e salva com sucesso! 🎸");
-      curCifraSemitones = 0;
-      renderCifraView(h);
+      const parsedSong = parseAIWorshipResponse(result, query);
+      saveCustomWorship(parsedSong);
+      toast("Louvor preparado para a banda! 🎸");
+      openSongForBand(parsedSong);
     }
   } catch (err) {
-    if (container) {
-      container.innerHTML = `<div class="empty">Não foi possível gerar a cifra (${escapeHtml(err.message)}).<br><br><button type="button" class="btn-gold" id="btnRetryGenCifra">Tentar novamente</button></div>`;
-      $("#btnRetryGenCifra")?.addEventListener("click", () => generateCifraWithAI(h));
-    }
+    reader.innerHTML = `
+      <div class="empty">
+        Não foi possível gerar este louvor (${escapeHtml(err.message)}).<br><br>
+        <button type="button" class="btn-gold" onclick="generateAILouvor('${escapeHtml(query)}')">🔄 Tentar novamente</button>
+      </div>
+    `;
   }
 }
 
-function openCifraModal(h, text) {
-  const modal = $("#cifraEditModal");
-  if (!modal) return;
-  $("#cifraEditTitle").textContent = `Cifra: Hino ${h.n} · ${h.title}`;
-  $("#cifraEditText").value = text || `[Tom: G]\n\n[Intro: G  D  C  D  G]\n\n      G\n1. ...`;
-  modal.hidden = false;
-  $("#cifraEditText").focus();
-}
+// Renderização dos 4 Modos da Banda
+function renderCurrentBandView() {
+  if (!curSongData) return;
+  const s = curSongData;
+  const reader = $("#harpaReader");
+  stopMetronome();
+  if (isCifraAutoScrolling) toggleCifraAutoScroll();
 
-function renderLyricsView(h) {
-  const isFav = harpaFavs.includes(h.n);
-  const stanzas = h.lyrics.split(/\n\n+/);
-  const bodyHtml = stanzas
+  document.querySelectorAll(".band-mode-selector .bmode-btn").forEach((b) => {
+    b.classList.toggle("active", b.dataset.bmode === curBandMode);
+  });
+
+  const rawCifra = s.cifra || localStorage.getItem(CIFRA_STORAGE_PREFIX + s.n) || BUILTIN_CIFRAS[s.n] || "";
+  const currentKey = extractCifraKey(rawCifra, curCifraSemitones) || s.tom || "G";
+  const transposedCifra = transposeCifraText(rawCifra, curCifraSemitones);
+  const formattedCifraHtml = formatCifraHTML(transposedCifra);
+
+  const isFav = s.isHarpa ? harpaFavs.includes(s.n) : false;
+
+  // Letra formatada para o Cantor
+  const stanzas = s.lyrics.split(/\n\n+/);
+  const cantorLyricsHtml = stanzas
     .map((st) => {
-      if (isChorusStanza(st)) {
-        return `<div class="hymn-chorus"><span class="hymn-chorus-tag">🎶 Coro</span>${escapeHtml(st)}</div>`;
-      }
-      return `<p class="hymn-stanza">${escapeHtml(st)}</p>`;
+      const isChorus = isChorusStanza(st) || /coro|refrão/i.test(st);
+      return `<div class="cantor-block ${isChorus ? "is-chorus" : ""}">${isChorus ? '<span class="hymn-chorus-tag">🎶 Coro</span>' : ""}${escapeHtml(st)}</div>`;
     })
     .join("");
 
-  const reader = $("#harpaReader");
-  reader.innerHTML = `
-    <h2>Hino ${h.n} · ${escapeHtml(h.title)}</h2>
-    <div class="testament">Harpa Cristã · Louvor Congregacional</div>
-    ${bodyHtml}
-    <div class="hymn-actions">
-      <button type="button" class="btn-outline" data-hact="meditate">☕ Meditar com o Mestre</button>
-      <button type="button" class="btn-ghost-gold" data-hact="fav">${isFav ? "★ Favoritado" : "⭐ Favoritar"}</button>
-      <button type="button" class="btn-ghost-gold" data-hact="copy">📋 Copiar letra</button>
-      <button type="button" class="btn-ghost-gold" data-hact="share">📤 Compartilhar</button>
-    </div>
-    <div class="chapter-nav">
-      <button type="button" data-hgo="-1" ${h.n <= 1 ? "hidden" : ""}>‹ Hino ${h.n - 1}</button>
-      <button type="button" data-hgo="1" ${h.n >= HARPA.length ? "hidden" : ""}>Hino ${h.n + 1} ›</button>
-    </div>
-  `;
-  reader.scrollTop = 0;
-}
-
-function renderCifraView(h) {
-  const isFav = harpaFavs.includes(h.n);
-  const rawCifra = localStorage.getItem(CIFRA_STORAGE_PREFIX + h.n) || BUILTIN_CIFRAS[h.n];
-  const reader = $("#harpaReader");
-
-  if (!rawCifra) {
+  if (curBandMode === "cantor") {
+    // ---------------- MODO 1: CANTOR ----------------
     reader.innerHTML = `
-      <h2>Hino ${h.n} · ${escapeHtml(h.title)}</h2>
-      <div class="testament">Harpa Cristã · Louvor e Cifras</div>
-      <div class="cifra-empty-card">
-        <div class="cifra-empty-icon">🎸</div>
-        <h3>Cifra para Violão e Teclado</h3>
-        <p>Ainda não há cifra salva para este hino. Deseja que o Mestre Pastoral gere a harmonização completa agora?</p>
-        <div class="cifra-btn-row">
-          <button type="button" class="btn-gold" id="btnGenCifraWithAI">✨ Gerar Cifra com o Mestre</button>
-          <button type="button" class="btn-ghost-gold" id="btnOpenCifraEditor">✏️ Colar Minha Própria Cifra</button>
+      <h2>${s.isHarpa ? `Hino ${s.n} · ` : ""}${escapeHtml(s.title)}</h2>
+      <div class="testament">${escapeHtml(s.artist || "Louvor Congregacional")} · Modo Cantor</div>
+
+      <div class="cantor-meta-bar">
+        <span>🎵 Tom: ${escapeHtml(currentKey)}</span>
+        <span>⏱️ Andamento: ${s.bpm || 70} BPM</span>
+        <div class="cifra-tool-group">
+          <button type="button" class="cifra-tool-btn" id="btnFontDown" title="Diminuir fonte">A-</button>
+          <button type="button" class="cifra-tool-btn" id="btnFontUp" title="Aumentar fonte">A+</button>
+          <button type="button" class="cifra-tool-btn" id="btnAutoScroll" title="Rolagem automática da tela">▶ Rolar</button>
         </div>
       </div>
+
+      <div class="cantor-lyrics-box" id="cantorLyricsBox" style="font-size: ${curCifraFontSize + 2}px">
+        ${cantorLyricsHtml}
+      </div>
+
       <div class="hymn-actions">
         <button type="button" class="btn-outline" data-hact="meditate">☕ Meditar com o Mestre</button>
-        <button type="button" class="btn-ghost-gold" data-hact="fav">${isFav ? "★ Favoritado" : "⭐ Favoritar"}</button>
+        ${s.isHarpa ? `<button type="button" class="btn-ghost-gold" data-hact="fav">${isFav ? "★ Favoritado" : "⭐ Favoritar"}</button>` : ""}
+        <button type="button" class="btn-ghost-gold" data-hact="copy">📋 Copiar letra</button>
       </div>
       <div class="chapter-nav">
-        <button type="button" data-hgo="-1" ${h.n <= 1 ? "hidden" : ""}>‹ Hino ${h.n - 1}</button>
-        <button type="button" data-hgo="1" ${h.n >= HARPA.length ? "hidden" : ""}>Hino ${h.n + 1} ›</button>
+        <button type="button" data-hgo="-1" ${!s.isHarpa || s.n <= 1 ? "hidden" : ""}>‹ Hino anterior</button>
+        <button type="button" data-hgo="1" ${!s.isHarpa || s.n >= HARPA?.length ? "hidden" : ""}>Próximo hino ›</button>
       </div>
     `;
-    reader.scrollTop = 0;
-    $("#btnGenCifraWithAI")?.addEventListener("click", () => generateCifraWithAI(h));
-    $("#btnOpenCifraEditor")?.addEventListener("click", () => openCifraModal(h, ""));
-    return;
+  } else if (curBandMode === "violao") {
+    // ---------------- MODO 2: VIOLÃO & GUITARRA ----------------
+    reader.innerHTML = `
+      <h2>${s.isHarpa ? `Hino ${s.n} · ` : ""}${escapeHtml(s.title)}</h2>
+      <div class="testament">${escapeHtml(s.artist || "Louvor Congregacional")} · Violão & Guitarra</div>
+
+      <div class="instrument-card">
+        <div class="instrument-card-head">
+          <span>🎸 Levada / Batida do Violão</span>
+          <span class="card-tag">Compasso: ${escapeHtml(s.compasso || "4/4")}</span>
+        </div>
+        <div class="instrument-card-body">
+          <b>Ritmo sugerido:</b> ${escapeHtml(s.batidaViolao || "Dedilhado suave nas estrofes; batida cheia e crescente no refrão.")}
+        </div>
+      </div>
+
+      <div class="cifra-toolbar">
+        <div class="cifra-tool-group">
+          <button type="button" class="cifra-tool-btn" id="btnTransposeDown" title="Abaixar meio tom">◀ Tom</button>
+          <span class="cifra-key-pill" id="cifraKeyBadge">Tom: ${escapeHtml(currentKey)}</span>
+          <button type="button" class="cifra-tool-btn" id="btnTransposeUp" title="Aumentar meio tom">Tom ▶</button>
+        </div>
+        <div class="cifra-tool-group">
+          <button type="button" class="cifra-tool-btn" id="btnFontDown">A-</button>
+          <button type="button" class="cifra-tool-btn" id="btnFontUp">A+</button>
+          <button type="button" class="cifra-tool-btn" id="btnAutoScroll">▶ Rolar</button>
+        </div>
+        <div class="cifra-tool-group">
+          <button type="button" class="cifra-tool-btn" id="btnEditCifra">✏️ Editar</button>
+          <button type="button" class="cifra-tool-btn" id="btnCopyCifra">📋 Copiar</button>
+        </div>
+      </div>
+
+      <div class="cifra-view-container" id="cifraViewContainer" style="font-size: ${curCifraFontSize}px">
+        ${formattedCifraHtml || '<div class="empty">Cifra não disponível. Toque em Editar para colar.</div>'}
+      </div>
+
+      <div class="hymn-actions">
+        <button type="button" class="btn-outline" data-hact="meditate">☕ Meditar com o Mestre</button>
+        ${s.isHarpa ? `<button type="button" class="btn-ghost-gold" data-hact="fav">${isFav ? "★ Favoritado" : "⭐ Favoritar"}</button>` : ""}
+      </div>
+      <div class="chapter-nav">
+        <button type="button" data-hgo="-1" ${!s.isHarpa || s.n <= 1 ? "hidden" : ""}>‹ Hino anterior</button>
+        <button type="button" data-hgo="1" ${!s.isHarpa || s.n >= HARPA?.length ? "hidden" : ""}>Próximo hino ›</button>
+      </div>
+    `;
+  } else if (curBandMode === "teclado") {
+    // ---------------- MODO 3: TECLADO & PIANO ----------------
+    const uniqueChords = extractUniqueChords(transposedCifra);
+    const chordPills = uniqueChords
+      .map((ch) => {
+        const notes = CHORD_NOTES_MAP[ch] || CHORD_NOTES_MAP[ch.replace(/m|7|9/g, "")] || "Acorde";
+        return `<div class="chord-note-pill"><b>${ch}:</b> ${notes}</div>`;
+      })
+      .join("");
+
+    reader.innerHTML = `
+      <h2>${s.isHarpa ? `Hino ${s.n} · ` : ""}${escapeHtml(s.title)}</h2>
+      <div class="testament">${escapeHtml(s.artist || "Louvor Congregacional")} · Teclado & Piano</div>
+
+      <div class="instrument-card">
+        <div class="instrument-card-head">
+          <span>🎹 Guia de Teclado & Formação dos Acordes</span>
+          <span class="card-tag">Tom: ${escapeHtml(currentKey)}</span>
+        </div>
+        <div class="instrument-card-body">
+          <div><b>Dica de Ambiência:</b> ${escapeHtml(s.teclado || "Usar Pad atmosférico com acordes abertos na mão esquerda e condução suave no piano")}</div>
+          <div class="chord-pills-row" style="margin-top:10px">
+            ${chordPills || '<span style="font-size:.82rem;color:var(--muted)">Acordes em Sol Maior</span>'}
+          </div>
+        </div>
+      </div>
+
+      <div class="cifra-toolbar">
+        <div class="cifra-tool-group">
+          <button type="button" class="cifra-tool-btn" id="btnTransposeDown" title="Abaixar meio tom">◀ Tom</button>
+          <span class="cifra-key-pill" id="cifraKeyBadge">Tom: ${escapeHtml(currentKey)}</span>
+          <button type="button" class="cifra-tool-btn" id="btnTransposeUp" title="Aumentar meio tom">Tom ▶</button>
+        </div>
+        <div class="cifra-tool-group">
+          <button type="button" class="cifra-tool-btn" id="btnFontDown">A-</button>
+          <button type="button" class="cifra-tool-btn" id="btnFontUp">A+</button>
+          <button type="button" class="cifra-tool-btn" id="btnAutoScroll">▶ Rolar</button>
+        </div>
+        <div class="cifra-tool-group">
+          <button type="button" class="cifra-tool-btn" id="btnEditCifra">✏️ Editar</button>
+        </div>
+      </div>
+
+      <div class="cifra-view-container" id="cifraViewContainer" style="font-size: ${curCifraFontSize}px">
+        ${formattedCifraHtml || '<div class="empty">Cifra não disponível.</div>'}
+      </div>
+
+      <div class="hymn-actions">
+        <button type="button" class="btn-outline" data-hact="meditate">☕ Meditar com o Mestre</button>
+      </div>
+      <div class="chapter-nav">
+        <button type="button" data-hgo="-1" ${!s.isHarpa || s.n <= 1 ? "hidden" : ""}>‹ Hino anterior</button>
+        <button type="button" data-hgo="1" ${!s.isHarpa || s.n >= HARPA?.length ? "hidden" : ""}>Próximo hino ›</button>
+      </div>
+    `;
+  } else if (curBandMode === "bateria") {
+    // ---------------- MODO 4: BATERIA & RITMO ----------------
+    const beatsCount = s.compasso && s.compasso.includes("3") ? 3 : s.compasso && s.compasso.includes("6") ? 6 : 4;
+    const dotsHtml = Array.from({ length: beatsCount })
+      .map((_, i) => `<div class="metronome-beat-dot" data-beat="${i}"></div>`)
+      .join("");
+
+    reader.innerHTML = `
+      <h2>${s.isHarpa ? `Hino ${s.n} · ` : ""}${escapeHtml(s.title)}</h2>
+      <div class="testament">${escapeHtml(s.artist || "Louvor Congregacional")} · Bateria & Metrônomo</div>
+
+      <div class="bateria-dashboard">
+        <div class="bpm-label">Andamento & Compasso (${escapeHtml(s.compasso || "4/4")})</div>
+        <div class="bpm-display" id="bpmNumber">${s.bpm || 70} <span style="font-size:1.1rem;color:var(--muted)">BPM</span></div>
+        <div class="bpm-controls">
+          <button type="button" class="cifra-tool-btn" id="btnBpmDown">- 5 BPM</button>
+          <button type="button" class="btn-metronome-toggle" id="btnToggleMetronome">▶ Ligar Metrônomo</button>
+          <button type="button" class="cifra-tool-btn" id="btnBpmUp">+ 5 BPM</button>
+        </div>
+        <div class="metronome-visual-row">
+          ${dotsHtml}
+        </div>
+        <div class="drum-conduction-box">
+          <div style="font-weight:700;color:var(--brown);margin-bottom:4px">🥁 Guia de Condução da Bateria:</div>
+          <div>${escapeHtml(s.bateria || "Versos suaves no chimbal/shaker. Construa dinâmica na ponte e conduza firme no refrão.")}</div>
+          <div style="margin-top:6px;font-size:.82rem;color:var(--muted)"><b>Estilo musical:</b> ${escapeHtml(s.estilo || "Worship")}</div>
+        </div>
+      </div>
+
+      <div class="cantor-lyrics-box" style="font-size:${curCifraFontSize}px;opacity:.92">
+        <h3 style="font-family:'Lora',serif;font-size:1.15rem;color:var(--brown);margin-bottom:12px">Acompanhamento da Letra (Estrutura da Música):</h3>
+        ${cantorLyricsHtml}
+      </div>
+
+      <div class="hymn-actions">
+        <button type="button" class="btn-outline" data-hact="meditate">☕ Meditar com o Mestre</button>
+      </div>
+      <div class="chapter-nav">
+        <button type="button" data-hgo="-1" ${!s.isHarpa || s.n <= 1 ? "hidden" : ""}>‹ Hino anterior</button>
+        <button type="button" data-hgo="1" ${!s.isHarpa || s.n >= HARPA?.length ? "hidden" : ""}>Próximo hino ›</button>
+      </div>
+    `;
+
+    $("#btnToggleMetronome")?.addEventListener("click", () => {
+      if (isMetronomeRunning) {
+        stopMetronome();
+      } else {
+        startMetronome(s.bpm || 70, beatsCount);
+      }
+    });
+    $("#btnBpmDown")?.addEventListener("click", () => {
+      s.bpm = Math.max(40, (s.bpm || 70) - 5);
+      const disp = $("#bpmNumber");
+      if (disp) disp.innerHTML = `${s.bpm} <span style="font-size:1.1rem;color:var(--muted)">BPM</span>`;
+      if (isMetronomeRunning) startMetronome(s.bpm, beatsCount);
+    });
+    $("#btnBpmUp")?.addEventListener("click", () => {
+      s.bpm = Math.min(220, (s.bpm || 70) + 5);
+      const disp = $("#bpmNumber");
+      if (disp) disp.innerHTML = `${s.bpm} <span style="font-size:1.1rem;color:var(--muted)">BPM</span>`;
+      if (isMetronomeRunning) startMetronome(s.bpm, beatsCount);
+    });
   }
 
-  const currentKey = extractCifraKey(rawCifra, curCifraSemitones);
-  const transposed = transposeCifraText(rawCifra, curCifraSemitones);
-  const formattedHtml = formatCifraHTML(transposed);
-
-  reader.innerHTML = `
-    <h2>Hino ${h.n} · ${escapeHtml(h.title)}</h2>
-    <div class="testament">Harpa Cristã · Cifra Musical</div>
-
-    <div class="cifra-toolbar">
-      <div class="cifra-tool-group">
-        <button type="button" class="cifra-tool-btn" id="btnTransposeDown" title="Abaixar meio tom">◀ Tom</button>
-        <span class="cifra-key-pill" id="cifraKeyBadge">Tom: ${escapeHtml(currentKey)}</span>
-        <button type="button" class="cifra-tool-btn" id="btnTransposeUp" title="Aumentar meio tom">Tom ▶</button>
-      </div>
-      <div class="cifra-tool-group">
-        <button type="button" class="cifra-tool-btn" id="btnFontDown" title="Diminuir fonte">A-</button>
-        <button type="button" class="cifra-tool-btn" id="btnFontUp" title="Aumentar fonte">A+</button>
-        <button type="button" class="cifra-tool-btn" id="btnAutoScroll" title="Rolagem automática da tela">▶ Rolar</button>
-      </div>
-      <div class="cifra-tool-group">
-        <button type="button" class="cifra-tool-btn" id="btnEditCifra">✏️ Editar</button>
-        <button type="button" class="cifra-tool-btn" id="btnRegenCifra" title="Gerar nova versão com IA">🔄 IA</button>
-        <button type="button" class="cifra-tool-btn" id="btnCopyCifra">📋 Copiar</button>
-      </div>
-    </div>
-
-    <div class="cifra-view-container" id="cifraViewContainer" style="font-size: ${curCifraFontSize}px">
-      ${formattedHtml}
-    </div>
-
-    <div class="hymn-actions">
-      <button type="button" class="btn-outline" data-hact="meditate">☕ Meditar com o Mestre</button>
-      <button type="button" class="btn-ghost-gold" data-hact="fav">${isFav ? "★ Favoritado" : "⭐ Favoritar"}</button>
-    </div>
-    <div class="chapter-nav">
-      <button type="button" data-hgo="-1" ${h.n <= 1 ? "hidden" : ""}>‹ Hino ${h.n - 1}</button>
-      <button type="button" data-hgo="1" ${h.n >= HARPA.length ? "hidden" : ""}>Hino ${h.n + 1} ›</button>
-    </div>
-  `;
-  reader.scrollTop = 0;
-
+  // Eventos comuns aos modos
   $("#btnTransposeDown")?.addEventListener("click", () => {
     curCifraSemitones -= 1;
-    renderCifraView(h);
+    renderCurrentBandView();
   });
   $("#btnTransposeUp")?.addEventListener("click", () => {
     curCifraSemitones += 1;
-    renderCifraView(h);
+    renderCurrentBandView();
   });
   $("#btnFontDown")?.addEventListener("click", () => {
     if (curCifraFontSize > 11) curCifraFontSize -= 1;
-    const box = $("#cifraViewContainer");
+    const box = $("#cifraViewContainer") || $("#cantorLyricsBox");
     if (box) box.style.fontSize = curCifraFontSize + "px";
   });
   $("#btnFontUp")?.addEventListener("click", () => {
-    if (curCifraFontSize < 24) curCifraFontSize += 1;
-    const box = $("#cifraViewContainer");
+    if (curCifraFontSize < 26) curCifraFontSize += 1;
+    const box = $("#cifraViewContainer") || $("#cantorLyricsBox");
     if (box) box.style.fontSize = curCifraFontSize + "px";
   });
   $("#btnAutoScroll")?.addEventListener("click", toggleCifraAutoScroll);
-  $("#btnEditCifra")?.addEventListener("click", () => openCifraModal(h, rawCifra));
-  $("#btnRegenCifra")?.addEventListener("click", () => {
-    if (confirm("Deseja que o Mestre Pastoral crie uma nova harmonização para este hino?")) {
-      generateCifraWithAI(h);
-    }
-  });
+  $("#btnEditCifra")?.addEventListener("click", () => openCifraModal(s, rawCifra));
   $("#btnCopyCifra")?.addEventListener("click", () => {
-    copyText(`Hino ${h.n} — ${h.title} (Harpa Cristã)\n\n${transposed}`);
+    copyText(`${s.title}\n\n${transposedCifra}`);
   });
+}
+
+function openSongForBand(songData) {
+  curSongData = songData;
+  curCifraSemitones = 0;
+  setView("harpa");
+  $("#harpaIndexView").hidden = true;
+  $("#harpaReaderView").hidden = false;
+
+  $("#harpaPrevBtn").disabled = !songData.isHarpa || songData.n <= 1;
+  $("#harpaNextBtn").disabled = !songData.isHarpa || songData.n >= HARPA?.length;
+
+  renderCurrentBandView();
 }
 
 function openHymn(n) {
@@ -1225,23 +1464,155 @@ function openHymn(n) {
   const h = HARPA.find((x) => x.n === n);
   if (!h) return;
   curHymnNum = h.n;
-  curCifraSemitones = 0;
-  if (isCifraAutoScrolling) toggleCifraAutoScroll();
-  setView("harpa");
-  $("#harpaIndexView").hidden = true;
-  $("#harpaReaderView").hidden = false;
 
-  $("#harpaPrevBtn").disabled = h.n <= 1;
-  $("#harpaNextBtn").disabled = h.n >= HARPA.length;
+  const rawCifra = localStorage.getItem(CIFRA_STORAGE_PREFIX + h.n) || BUILTIN_CIFRAS[h.n] || "";
+  const isWaltz = h.lyrics.includes("3/") || /valsa/i.test(h.title);
 
-  $("#btnHymnLyrics")?.classList.toggle("active", curHymnTab === "lyrics");
-  $("#btnHymnCifra")?.classList.toggle("active", curHymnTab === "cifra");
+  const songData = {
+    id: "harpa:" + h.n,
+    isHarpa: true,
+    n: h.n,
+    title: h.title,
+    artist: "Harpa Cristã (Hino " + h.n + ")",
+    tom: "G",
+    bpm: isWaltz ? 84 : 76,
+    compasso: isWaltz ? "3/4" : "4/4",
+    estilo: isWaltz ? "Valsa Tradicional" : "Marcha / Hino Sacro",
+    batidaViolao: isWaltz ? "Valsa dedilhada (P - i - m) ou batida 3/4 (↓  ↑↓  ↑↓)" : "Batida tradicional de hino 4/4 (↓  ↓↑  ↑↓↑)",
+    teclado: "Acordes cheios com sustentação harmônica de órgão ou piano de cauda",
+    bateria: isWaltz ? "Condução 3/4 suave com vassourinha ou chimbal" : "Marcação firme 4/4 no bumbo com caixa no tempo 2 e 4",
+    lyrics: h.lyrics,
+    cifra: rawCifra
+  };
 
-  if (curHymnTab === "cifra") {
-    renderCifraView(h);
-  } else {
-    renderLyricsView(h);
+  openSongForBand(songData);
+}
+
+function renderHarpaList(submitTriggered = false) {
+  const listEl = $("#harpaList");
+  if (!HARPA) {
+    listEl.innerHTML = `<div class="loading">Carregando os 524 hinos da Harpa Cristã…</div>`;
+    return;
   }
+
+  const rawQ = ($("#harpaSearchInput").value || "").trim();
+  const numMatch = rawQ.match(/^(?:hino\s*|n[º°]?\s*|#)?(\d{1,3})$/i);
+  const exactNum = numMatch ? Number(numMatch[1]) : null;
+
+  // Se o usuário digitou um número exato e apertou Enter, abre o hino direto!
+  if (submitTriggered && exactNum && exactNum >= 1 && exactNum <= HARPA.length) {
+    openHymn(exactNum);
+    return;
+  }
+
+  const nq = norm(rawQ);
+  const favSet = new Set(harpaFavs);
+  const worshipLib = getWorshipLibrary();
+
+  // Se clicou na aba de Louvores Salvos
+  if (curHarpaRange === "LOUVORES" && !rawQ) {
+    let html = `<p class="count">${worshipLib.length} louvor(es) da igreja disponíveis</p><div class="harpa-grid">`;
+    for (const song of worshipLib) {
+      html += `
+        <button type="button" class="harpa-card" data-worship="${escapeHtml(song.id)}">
+          <div class="harpa-num" style="background:#f4e4c8;font-size:1.1rem">🎸</div>
+          <div class="harpa-info">
+            <div class="harpa-title">${escapeHtml(song.title)}</div>
+            <div class="harpa-snip">${escapeHtml(song.artist || "Louvor da Igreja")} · Tom: ${song.tom || "G"} · ${song.bpm || 70} BPM</div>
+          </div>
+        </button>
+      `;
+    }
+    html += `</div>`;
+    listEl.innerHTML = html;
+    listEl.scrollTop = 0;
+    return;
+  }
+
+  let filtered = HARPA;
+  let matchingWorship = [];
+
+  if (rawQ) {
+    matchingWorship = worshipLib.filter((w) => norm(w.title).includes(nq) || norm(w.artist || "").includes(nq));
+    if (exactNum) {
+      const exact = HARPA.filter((h) => h.n === exactNum);
+      const partial = HARPA.filter((h) => h.n !== exactNum && String(h.n).includes(String(exactNum)));
+      filtered = [...exact, ...partial];
+    } else {
+      const byTitle = [];
+      const byLyrics = [];
+      for (const h of HARPA) {
+        if (String(h.n) === rawQ || h.normTitle.includes(nq)) byTitle.push(h);
+        else if (nq.length >= 2 && h.normLyrics.includes(nq)) byLyrics.push(h);
+      }
+      filtered = [...byTitle, ...byLyrics];
+    }
+  } else if (curHarpaRange === "FAV") {
+    filtered = HARPA.filter((h) => favSet.has(h.n));
+  } else if (curHarpaRange !== "ALL") {
+    const [min, max] = curHarpaRange.split("-").map(Number);
+    filtered = HARPA.filter((h) => h.n >= min && h.n <= max);
+  }
+
+  // Se o usuário digitou Enter numa busca de louvor contemporâneo
+  if (submitTriggered && rawQ && !exactNum && matchingWorship.length > 0) {
+    openSongForBand(matchingWorship[0]);
+    return;
+  }
+
+  let html = "";
+
+  // Botão para gerar com IA qualquer louvor digitado fora da Harpa
+  if (rawQ && rawQ.length >= 2) {
+    html += `
+      <div class="search-ai-louvor-card">
+        <div style="font-size:1.9rem;margin-bottom:4px">✨🎸</div>
+        <div style="font-weight:700;color:var(--brown);font-size:1.1rem">Música da Igreja: “${escapeHtml(rawQ)}”</div>
+        <p style="font-size:.86rem;color:var(--muted);margin:4px 0 14px">O Mestre Pastoral pesquisa e monta a Letra para o Cantor, Cifra para Violão/Teclado e Ritmo/Metrônomo para a Bateria.</p>
+        <button type="button" class="btn-gold" id="btnRunAILouvor">🎸 Abrir “${escapeHtml(rawQ)}” para a Banda com IA</button>
+      </div>
+    `;
+  }
+
+  if (matchingWorship.length > 0) {
+    html += `<p class="count">Louvores da Igreja encontrados:</p><div class="harpa-grid" style="margin-bottom:20px">`;
+    for (const song of matchingWorship) {
+      html += `
+        <button type="button" class="harpa-card" data-worship="${escapeHtml(song.id)}">
+          <div class="harpa-num" style="background:#f4e4c8;font-size:1.1rem">🎸</div>
+          <div class="harpa-info">
+            <div class="harpa-title">${escapeHtml(song.title)}</div>
+            <div class="harpa-snip">${escapeHtml(song.artist || "Louvor da Igreja")} · Tom: ${song.tom || "G"}</div>
+          </div>
+        </button>
+      `;
+    }
+    html += `</div>`;
+  }
+
+  if (filtered.length > 0) {
+    html += `<p class="count">${filtered.length} hino(s) da Harpa ${rawQ ? `encontrado(s) para “${escapeHtml(rawQ)}”` : "na lista"}</p><div class="harpa-grid">`;
+    for (const h of filtered) {
+      const titleHtml = nq && !exactNum && h.normTitle.includes(nq) ? highlight(h.title, h.normTitle, nq) : escapeHtml(h.title);
+      const star = favSet.has(h.n) ? `<span class="harpa-star" title="Favorito">★</span>` : "";
+      html += `<button type="button" class="harpa-card" data-hymn="${h.n}">
+        <div class="harpa-num">${h.n}</div>
+        <div class="harpa-info">
+          <div class="harpa-title">${titleHtml}</div>
+          <div class="harpa-snip">${escapeHtml(h.firstLine)}</div>
+        </div>
+        ${star}
+      </button>`;
+    }
+    html += `</div>`;
+  } else if (!matchingWorship.length && !rawQ) {
+    html += `<p class="empty">Nenhum item encontrado.</p>`;
+  }
+
+  listEl.innerHTML = html;
+  listEl.scrollTop = 0;
+
+  $("#btnRunAILouvor")?.addEventListener("click", () => generateAILouvor(rawQ));
 }
 
 function initHarpaEvents() {
@@ -1264,31 +1635,37 @@ function initHarpaEvents() {
     renderHarpaList(false);
   });
   $("#harpaList").addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-hymn]");
-    if (!btn) return;
-    openHymn(Number(btn.dataset.hymn));
+    const hymnBtn = e.target.closest("[data-hymn]");
+    if (hymnBtn) {
+      openHymn(Number(hymnBtn.dataset.hymn));
+      return;
+    }
+    const worshipBtn = e.target.closest("[data-worship]");
+    if (worshipBtn) {
+      const wId = worshipBtn.dataset.worship;
+      const song = getWorshipLibrary().find((w) => w.id === wId);
+      if (song) openSongForBand(song);
+    }
   });
+
   $("#harpaBackBtn").onclick = () => {
+    stopMetronome();
     if (isCifraAutoScrolling) toggleCifraAutoScroll();
     showHarpaIndex();
   };
-  $("#harpaPrevBtn").onclick = () => openHymn(curHymnNum - 1);
-  $("#harpaNextBtn").onclick = () => openHymn(curHymnNum + 1);
+  $("#harpaPrevBtn").onclick = () => {
+    if (curSongData?.isHarpa) openHymn(curSongData.n - 1);
+  };
+  $("#harpaNextBtn").onclick = () => {
+    if (curSongData?.isHarpa) openHymn(curSongData.n + 1);
+  };
 
-  $("#btnHymnLyrics")?.addEventListener("click", () => {
-    curHymnTab = "lyrics";
-    $("#btnHymnLyrics").classList.add("active");
-    $("#btnHymnCifra").classList.remove("active");
-    const h = HARPA?.find((x) => x.n === curHymnNum);
-    if (h) renderLyricsView(h);
-  });
-
-  $("#btnHymnCifra")?.addEventListener("click", () => {
-    curHymnTab = "cifra";
-    $("#btnHymnCifra").classList.add("active");
-    $("#btnHymnLyrics").classList.remove("active");
-    const h = HARPA?.find((x) => x.n === curHymnNum);
-    if (h) renderCifraView(h);
+  // Seletor de Modo da Banda (Cantor, Violão, Teclado, Bateria)
+  document.querySelectorAll(".band-mode-selector .bmode-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      curBandMode = btn.dataset.bmode;
+      renderCurrentBandView();
+    });
   });
 
   // Modal de edição de cifra
@@ -1300,48 +1677,51 @@ function initHarpaEvents() {
       toast("A cifra não pode estar vazia");
       return;
     }
-    localStorage.setItem(CIFRA_STORAGE_PREFIX + curHymnNum, val);
+    if (curSongData) {
+      curSongData.cifra = val;
+      if (curSongData.isHarpa) {
+        localStorage.setItem(CIFRA_STORAGE_PREFIX + curSongData.n, val);
+      } else {
+        saveCustomWorship(curSongData);
+      }
+    }
     $("#cifraEditModal").hidden = true;
     toast("Cifra salva com sucesso! 🎸");
     curCifraSemitones = 0;
-    const h = HARPA?.find((x) => x.n === curHymnNum);
-    if (h) renderCifraView(h);
+    renderCurrentBandView();
   });
 
   $("#harpaStudyBtn").onclick = () => {
-    const h = HARPA?.find((x) => x.n === curHymnNum);
-    if (!h) return;
+    if (!curSongData) return;
     askMaster(
-      `Medite comigo no Hino ${h.n} da Harpa Cristã (${h.title}) e me mostre como usar sua mensagem em uma pregação.`,
+      `Medite comigo no louvor '${curSongData.title}' (${curSongData.artist || "Harpa Cristã"}) e me mostre como usar sua mensagem em uma pregação.`,
       "estudo",
-      { ref: `Harpa Cristã — Hino ${h.n}: ${h.title}`, text: h.lyrics }
+      { ref: `Louvor — ${curSongData.title}`, text: curSongData.lyrics }
     );
   };
+
   $("#harpaReader").addEventListener("click", (e) => {
     const go = e.target.closest("[data-hgo]");
-    if (go) return openHymn(curHymnNum + Number(go.dataset.hgo));
+    if (go && curSongData?.isHarpa) {
+      return openHymn(curSongData.n + Number(go.dataset.hgo));
+    }
     const act = e.target.closest("[data-hact]")?.dataset.hact;
-    if (!act) return;
-    const h = HARPA?.find((x) => x.n === curHymnNum);
-    if (!h) return;
-    const fullText = `Hino ${h.n} — ${h.title} (Harpa Cristã)\n\n${h.lyrics}`;
+    if (!act || !curSongData) return;
+    const fullText = `${curSongData.title} — ${curSongData.artist || "Louvor da Igreja"}\n\n${curSongData.lyrics}`;
     if (act === "meditate") {
       $("#harpaStudyBtn").click();
     } else if (act === "copy") {
       copyText(fullText);
-    } else if (act === "share") {
-      if (navigator.share) navigator.share({ title: `Hino ${h.n} - ${h.title}`, text: fullText }).catch(() => {});
-      else window.open("https://wa.me/?text=" + encodeURIComponent(fullText), "_blank");
-    } else if (act === "fav") {
-      if (harpaFavs.includes(h.n)) {
-        harpaFavs = harpaFavs.filter((x) => x !== h.n);
+    } else if (act === "fav" && curSongData.isHarpa) {
+      if (harpaFavs.includes(curSongData.n)) {
+        harpaFavs = harpaFavs.filter((x) => x !== curSongData.n);
         toast("Removido dos favoritos da Harpa");
       } else {
-        harpaFavs = [h.n, ...harpaFavs];
+        harpaFavs = [curSongData.n, ...harpaFavs];
         toast("Salvo nos favoritos da Harpa ⭐");
       }
       saveHarpaFavs();
-      openHymn(h.n);
+      renderCurrentBandView();
     }
   });
 }
