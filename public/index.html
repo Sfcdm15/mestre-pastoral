@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-title" content="Mestre Pastoral" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=6" />
+  <link rel="stylesheet" href="style.css?v=7" />
 </head>
 <body>
   <header class="topbar">
@@ -24,6 +24,14 @@
         <p>Gabinete de estudo bíblico e homilética</p>
       </div>
     </div>
+    <nav class="desktop-nav" aria-label="Navegação Principal">
+      <button class="tab" data-view="home"><span>🏠</span>Início</button>
+      <button class="tab" data-view="bible"><span>📖</span>Bíblia</button>
+      <button class="tab" data-view="harpa"><span>🎵</span>Harpa</button>
+      <button class="tab" data-view="chat"><span>☕</span>Mestre</button>
+      <button class="tab" data-view="search"><span>🔍</span>Buscar</button>
+      <button class="tab" data-view="oferta"><span>❤️</span>Oferta</button>
+    </nav>
     <div class="top-actions">
       <button id="topOfertaBtn" class="btn-oferta-top" type="button" title="Ajude famílias necessitadas e apoie esta obra">❤️ Oferta</button>
       <button id="topFavsBtn" class="ghost" type="button" title="Versículos favoritos">⭐ Salvos</button>
@@ -406,7 +414,7 @@
 
   <div id="toast" class="toast" hidden></div>
 
-  <script src="app.js?v=6"></script>
-  <script src="bible.js?v=6"></script>
+  <script src="app.js?v=7"></script>
+  <script src="bible.js?v=7"></script>
 </body>
 </html>

@@ -32,6 +32,24 @@ body {
 button { font: inherit; }
 .scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
+/* Scrollbar suave e elegante */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(118, 101, 82, 0.22);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(118, 101, 82, 0.45);
+}
+
+.desktop-nav { display: none; }
+
 /* ---------- Topo ---------- */
 .topbar {
   display: flex; align-items: center; justify-content: space-between;
@@ -841,4 +859,170 @@ a.bref:hover { background: var(--gold-soft); border-radius: 4px; }
   .quick-bar button { padding: 9px 13px; font-size: .8rem; }
   .oferta-banner { flex-direction: column; align-items: stretch; text-align: left; }
   .btn-oferta-cta { width: 100%; text-align: center; }
+}
+
+/* ---------- Responsivo para Computadores / Monitores (Desktop & Tablets Paisagem) ---------- */
+@media (min-width: 860px) {
+  body {
+    max-width: 1280px;
+    box-shadow: 0 0 50px rgba(59, 42, 26, 0.08);
+    border-left: 1px solid rgba(231, 219, 198, 0.5);
+    border-right: 1px solid rgba(231, 219, 198, 0.5);
+  }
+
+  .topbar {
+    padding: 12px 28px;
+    gap: 18px;
+  }
+
+  /* Oculta a barra de abas de celular no computador */
+  .tabbar {
+    display: none !important;
+  }
+
+  /* Exibe o menu principal no topo */
+  .desktop-nav {
+    display: flex !important;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255, 253, 249, 0.9);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 4px 6px;
+    box-shadow: 0 2px 10px rgba(59, 42, 26, 0.04);
+  }
+
+  .desktop-nav .tab {
+    border: 0;
+    background: transparent;
+    padding: 7px 15px;
+    border-radius: 999px;
+    font-size: .86rem;
+    font-weight: 600;
+    color: var(--muted);
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all .18s;
+  }
+
+  .desktop-nav .tab span {
+    font-size: 1.05rem;
+    filter: none;
+    transform: none !important;
+  }
+
+  .desktop-nav .tab:hover {
+    background: var(--gold-soft);
+    color: var(--brown);
+  }
+
+  .desktop-nav .tab.active {
+    background: var(--brown);
+    color: #fffdf9;
+    box-shadow: 0 3px 10px rgba(59, 42, 26, 0.22);
+  }
+
+  .desktop-nav .tab.active span {
+    filter: brightness(1.2);
+  }
+
+  .desktop-nav .tab.active::after {
+    display: none;
+  }
+
+  /* Oculta botão de oferta duplicado no topo se já está na navegação */
+  #topOfertaBtn {
+    display: none;
+  }
+
+  /* Página Inicial no Desktop */
+  .home {
+    padding: 24px 36px 48px;
+    gap: 24px;
+  }
+
+  .hero-card {
+    padding: 28px 34px;
+  }
+
+  .hero-top h2 {
+    font-size: 1.65rem;
+  }
+
+  .vod-box {
+    padding: 22px 26px;
+  }
+
+  .vod-quote {
+    font-size: 1.25rem;
+    line-height: 1.75;
+  }
+
+  /* 4 cartões de atalhos dispostos em 4 colunas limpas */
+  .dash-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  /* Leitor Bíblico com largura ideal de leitura */
+  .reader-bar {
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 12px 24px;
+  }
+
+  .reader {
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 16px 28px 50px;
+  }
+
+  /* Chat com o Mestre com largura confortável */
+  .modes {
+    max-width: 860px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+  }
+
+  .chat {
+    max-width: 860px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 14px 24px 20px;
+  }
+
+  .composer {
+    max-width: 860px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+  }
+
+  /* Harpa Cristã */
+  .harpa-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  /* Busca Bíblica */
+  .search-container {
+    max-width: 960px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  /* Telas de Oferta e Favoritos */
+  .oferta-scroll, .favs-scroll {
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 24px 28px 60px;
+  }
 }
