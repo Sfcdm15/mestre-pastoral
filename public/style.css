@@ -438,6 +438,66 @@ button { font: inherit; }
   margin: 24px auto 10px; max-width: 560px;
 }
 
+/* Dois botões grandes destacados no topo: Harpa x Músicas da Igreja */
+.louvor-main-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 14px 14px 6px;
+  flex-wrap: wrap;
+}
+.lswitch-btn {
+  flex: 1;
+  min-width: 220px;
+  max-width: 420px;
+  border: 2px solid var(--line);
+  background: var(--paper);
+  color: var(--brown);
+  border-radius: 999px;
+  padding: 12px 20px;
+  font-size: .95rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all .18s;
+  text-align: center;
+}
+.lswitch-btn:hover {
+  border-color: var(--gold);
+  background: var(--gold-soft);
+  transform: translateY(-1px);
+}
+.lswitch-btn.active {
+  background: var(--brown);
+  color: #fffdf9;
+  border-color: var(--brown);
+  box-shadow: 0 4px 16px rgba(59, 42, 26, 0.24);
+}
+
+.worship-intro-banner {
+  background: linear-gradient(135deg, #fdf8ef 0%, #f7ebd5 100%);
+  border: 1.5px solid var(--gold);
+  border-radius: 18px;
+  padding: 20px 24px;
+  margin: 12px 14px 8px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+.worship-intro-banner h3 {
+  font-family: "Lora", serif;
+  font-size: 1.3rem;
+  color: var(--brown);
+  margin: 0 0 6px;
+}
+.worship-intro-banner p {
+  font-size: .88rem;
+  color: var(--muted);
+  max-width: 640px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
 /* Card de busca IA de qualquer louvor */
 .search-ai-louvor-card {
   background: linear-gradient(135deg, #fffcf6 0%, #f9f0e1 100%);

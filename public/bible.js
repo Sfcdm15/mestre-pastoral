@@ -1648,6 +1648,30 @@ function initHarpaEvents() {
     }
   });
 
+  $("#btnSwitchHarpa")?.addEventListener("click", () => {
+    $("#btnSwitchHarpa").classList.add("active");
+    $("#btnSwitchWorship").classList.remove("active");
+    $("#worshipBanner").hidden = true;
+    $("#harpaFilters").hidden = false;
+    $("#harpaSearchInput").placeholder = "Digite o número (ex.: 39) ou nome do hino da Harpa…";
+    curHarpaRange = "ALL";
+    $("#harpaSearchInput").value = "";
+    document.querySelectorAll("#harpaFilters .pill").forEach((p, idx) => p.classList.toggle("active", idx === 0));
+    renderHarpaList(false);
+  });
+
+  $("#btnSwitchWorship")?.addEventListener("click", () => {
+    $("#btnSwitchWorship").classList.add("active");
+    $("#btnSwitchHarpa").classList.remove("active");
+    $("#worshipBanner").hidden = false;
+    $("#harpaFilters").hidden = true;
+    $("#harpaSearchInput").placeholder = "Digite o nome da música (ex: Bondade de Deus, A Casa É Sua, Raridade)…";
+    curHarpaRange = "LOUVORES";
+    $("#harpaSearchInput").value = "";
+    renderHarpaList(false);
+    setTimeout(() => $("#harpaSearchInput").focus(), 80);
+  });
+
   $("#harpaBackBtn").onclick = () => {
     stopMetronome();
     if (isCifraAutoScrolling) toggleCifraAutoScroll();

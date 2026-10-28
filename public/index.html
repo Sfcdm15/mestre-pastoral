@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-title" content="Mestre Pastoral" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=10" />
+  <link rel="stylesheet" href="style.css?v=11" />
 </head>
 <body>
   <header class="topbar">
@@ -27,7 +27,7 @@
     <nav class="desktop-nav" aria-label="Navegação Principal">
       <button class="tab" data-view="home"><span>🏠</span>Início</button>
       <button class="tab" data-view="bible"><span>📖</span>Bíblia</button>
-      <button class="tab" data-view="harpa"><span>🎵</span>Harpa</button>
+      <button class="tab" data-view="harpa"><span>🎵</span>Louvor & Harpa</button>
       <button class="tab" data-view="chat"><span>☕</span>Mestre</button>
       <button class="tab" data-view="search"><span>🔍</span>Buscar</button>
       <button class="tab" data-view="oferta"><span>❤️</span>Oferta</button>
@@ -192,13 +192,25 @@
   <!-- ============ HARPA CRISTÃ ============ -->
   <section id="view-harpa" class="view" hidden>
     <div id="harpaIndexView" class="harpa-container">
+      <!-- Alternador Principal: Harpa Cristã x Buscar Qualquer Música -->
+      <div class="louvor-main-switch" role="tablist">
+        <button type="button" class="lswitch-btn active" id="btnSwitchHarpa">📖 Harpa Cristã (524 Hinos)</button>
+        <button type="button" class="lswitch-btn" id="btnSwitchWorship">🎸 Buscar Qualquer Música da Igreja</button>
+      </div>
+
+      <!-- Banner de Louvores da Igreja -->
+      <div id="worshipBanner" class="worship-intro-banner" hidden>
+        <div style="font-size:2rem;margin-bottom:6px">🎸🎤🎹🥁</div>
+        <h3>Central de Louvor para a Banda</h3>
+        <p>Pesquise qualquer música que vai ser cantada na igreja (ex: <i>Bondade de Deus</i>, <i>A Casa É Sua</i>, <i>Raridade</i>, <i>Ruja o Leão</i>). O Mestre monta a Letra para o Cantor, Cifras para Violão e Teclado, e Metrônomo para a Bateria!</p>
+      </div>
+
       <form id="harpaSearchForm" class="harpa-search-bar">
-        <input id="harpaSearchInput" type="search" placeholder="Buscar hino da Harpa ou qualquer louvor (ex: Bondade de Deus, A Casa É Sua, Hino 15)…" autocomplete="off" />
+        <input id="harpaSearchInput" type="search" placeholder="Digite o número (ex.: 39) ou nome do hino (ex.: Chuvas de Graça)…" autocomplete="off" />
         <button type="submit" class="btn-primary">🔍 Pesquisar</button>
       </form>
       <div id="harpaFilters" class="harpa-filters">
-        <button type="button" class="pill active" data-range="ALL">Harpa (524)</button>
-        <button type="button" class="pill" data-range="LOUVORES">🎸 Louvores da Igreja</button>
+        <button type="button" class="pill active" data-range="ALL">Todos (524)</button>
         <button type="button" class="pill" data-range="1-100">1–100</button>
         <button type="button" class="pill" data-range="101-200">101–200</button>
         <button type="button" class="pill" data-range="201-300">201–300</button>
@@ -429,7 +441,7 @@
   <nav class="tabbar">
     <button class="tab" data-view="home"><span>🏠</span>Início</button>
     <button class="tab" data-view="bible"><span>📖</span>Bíblia</button>
-    <button class="tab" data-view="harpa"><span>🎵</span>Harpa</button>
+    <button class="tab" data-view="harpa"><span>🎵</span>Louvor</button>
     <button class="tab" data-view="chat"><span>☕</span>Mestre</button>
     <button class="tab" data-view="search"><span>🔍</span>Buscar</button>
     <button class="tab" data-view="oferta"><span>❤️</span>Oferta</button>
@@ -437,7 +449,7 @@
 
   <div id="toast" class="toast" hidden></div>
 
-  <script src="app.js?v=10"></script>
-  <script src="bible.js?v=10"></script>
+  <script src="app.js?v=11"></script>
+  <script src="bible.js?v=11"></script>
 </body>
 </html>
