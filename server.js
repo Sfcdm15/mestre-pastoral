@@ -307,6 +307,242 @@ async function handleOferta(req, res) {
   res.end();
 }
 
+function decodeHtmlEntities(str) {
+  return String(str || "")
+    .replace(/\u200B/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&#39;|&#x27;|&apos;/gi, "'")
+    .replace(/&quot;|&#34;/gi, '"')
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+}
+
+function isChordToken(tok) {
+  return /^[A-G][#b]?(?:m|maj|min|dim|aug|sus|add|7M|7|9|11|13|6|5|4|2|M|\d|[+\-\/()])*$/.test(tok);
+}
+
+function extractLyricsFromCifra(cifraText) {
+  const lines = String(cifraText || "").split(/\r?\n/);
+  const out = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (out.length && out[out.length - 1] !== "") out.push("");
+      continue;
+    }
+    if (/^\[(Tom|Intro|Tab|Solo|Capotraste|Acordes)/i.test(trimmed)) continue;
+    if (/^[EBGDAEebgdae]\|[-0-9hpb/~\s|xX]+/.test(trimmed)) continue;
+    if (/^\[[^\]]+\]$/.test(trimmed)) {
+      out.push(trimmed);
+      continue;
+    }
+    const tokens = trimmed.split(/\s+/);
+    const isChordLine = tokens.every((t) => isChordToken(t) || t === "|" || t === "/" || /^\(\d+x\)$/i.test(t));
+    if (!isChordLine) {
+      out.push(trimmed);
+    }
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+async function resolveCompleteSong(rawInput) {
+  const url = String(rawInput || "").trim();
+  let youtubeId = null;
+  let artist = "";
+  let title = "";
+  let ccArtistSlug = "";
+  let ccSongSlug = "";
+
+  // 1. Check if YouTube URL
+  const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+  if (ytMatch) {
+    youtubeId = ytMatch[1];
+    try {
+      const oembedRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${youtubeId}&format=json`, {
+        signal: AbortSignal.timeout(4000),
+      });
+      if (oembedRes.ok) {
+        const data = await oembedRes.json();
+        title = data.title || "";
+        artist = (data.author_name || "")
+          .replace(/\s*-\s*Topic$/i, "")
+          .replace(/\s*(?:Oficial|VEVO|Music)$/i, "")
+          .trim();
+      }
+    } catch {}
+
+    if (title.includes(" - ")) {
+      const parts = title.split(" - ");
+      artist = parts[0].trim();
+      title = parts.slice(1).join(" - ");
+    }
+    title = title
+      .replace(/\s*[\(\[][^\)\]]*(?:oficial|official|clipe|video|vídeo|ao vivo|live|remaster|lyric|áudio|audio|hd|4k|dvd)[^\)\]]*[\)\]]/gi, "")
+      .replace(/\s*-\s*(?:ao vivo|clipe oficial|vídeo oficial|oficial).*$/gi, "")
+      .trim();
+  }
+
+  // 2. Check if Cifra Club URL
+  const ccMatch = url.match(/cifraclub\.com\.br\/([^\/\?#]+)\/([^\/\?#]+)/i);
+  if (ccMatch) {
+    ccArtistSlug = ccMatch[1];
+    ccSongSlug = ccMatch[2];
+    const formatSlug = (s) =>
+      s
+        .split("-")
+        .map((w) => (["e", "de", "da", "do", "das", "dos", "em", "para", "com", "a", "o"].includes(w.toLowerCase()) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1)))
+        .join(" ");
+    artist = formatSlug(ccArtistSlug);
+    title = formatSlug(ccSongSlug);
+  }
+
+  const searchQuery = title ? (artist ? `${artist} ${title}` : title) : url;
+
+  // 3. Search Cifra Club Solr if we don't have exact slugs
+  if (!ccArtistSlug || !ccSongSlug) {
+    try {
+      const solrRes = await fetch(`https://solr.sscdn.co/cc/h2/?q=${encodeURIComponent(searchQuery)}`, {
+        signal: AbortSignal.timeout(4000),
+      });
+      if (solrRes.ok) {
+        const text = await solrRes.text();
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const data = JSON.parse(jsonMatch[0]);
+          const docs = data?.response?.docs || [];
+          const songDoc = docs.find((d) => d.t === "2" && d.d && d.u);
+          if (songDoc) {
+            ccArtistSlug = songDoc.d;
+            ccSongSlug = songDoc.u;
+            if (!title) title = songDoc.m || "";
+            if (!artist) artist = songDoc.a || "";
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // 4. Fetch Cifra Club page if slugs found
+  let cifraText = "";
+  let tom = "G";
+  let capo = "";
+  if (ccArtistSlug && ccSongSlug) {
+    try {
+      const ccUrl = `https://www.cifraclub.com.br/${ccArtistSlug}/${ccSongSlug}/`;
+      const ccRes = await fetch(ccUrl, {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (ccRes.ok) {
+        const html = await ccRes.text();
+        const pageTitleMatch = html.match(/<title>([^<]+?)\s+-\s+([^<]+?)\s+-\s+Cifra Club<\/title>/i);
+        if (pageTitleMatch) {
+          title = decodeHtmlEntities(pageTitleMatch[1]).trim();
+          artist = decodeHtmlEntities(pageTitleMatch[2]).trim();
+        }
+        const preMatch = html.match(/<pre[^>]*>([\s\S]*?)<\/pre>/i);
+        if (preMatch) {
+          let rawPre = preMatch[1]
+            .replace(/<span class="tablatura">[\s\S]*?<\/span>/gi, "")
+            .replace(/<[^>]+>/g, "");
+          rawPre = decodeHtmlEntities(rawPre)
+            .split(/\r?\n/)
+            .filter((line) => !/^\[Tab\s*-/i.test(line.trim()) && !/^[EBGDAEebgdae]\|[-0-9hpb/~\s|xX]+/.test(line.trim()))
+            .join("\n")
+            .replace(/\n{3,}/g, "\n\n")
+            .trim();
+
+          const tomInHtml = html.match(/cifra_tom[^>]*>[\s\S]*?<a[^>]*>([A-G][#b]?m?)<\/a>/i);
+          if (tomInHtml) {
+            tom = tomInHtml[1].trim();
+          } else {
+            const withoutTags = rawPre.replace(/\[[^\]]*\]/g, "");
+            const firstChord = withoutTags.match(/\b([A-G][#b]?m?)(?:7M|7|9|11|13|6|4|2|sus|dim|aug|add|\/|\s|$)/);
+            if (firstChord) tom = firstChord[1];
+          }
+
+          cifraText = `[Tom: ${tom}]\n\n` + rawPre;
+        }
+        if (!youtubeId) {
+          const ytInCc = html.match(/ytimg\.com\/vi\/([a-zA-Z0-9_-]{11})/i);
+          if (ytInCc) youtubeId = ytInCc[1];
+        }
+      }
+    } catch {}
+  }
+
+  // 5. Fetch Official Lyrics from Letras.mus.br Solr + Page
+  let lyricsText = "";
+  try {
+    const lQuery = title ? `${artist} ${title}` : searchQuery;
+    const lSolrRes = await fetch(`https://solr.sscdn.co/letras/m1/?q=${encodeURIComponent(lQuery)}`, {
+      signal: AbortSignal.timeout(4000),
+    });
+    if (lSolrRes.ok) {
+      const lText = await lSolrRes.text();
+      const lJsonMatch = lText.match(/\{[\s\S]*\}/);
+      if (lJsonMatch) {
+        const lData = JSON.parse(lJsonMatch[0]);
+        const lDoc = (lData?.response?.docs || []).find((d) => d.t === "2" && d.dns && d.url);
+        if (lDoc) {
+          if (!title) title = lDoc.txt || "";
+          if (!artist) artist = lDoc.art || "";
+          const lPageRes = await fetch(`https://www.letras.mus.br/${lDoc.dns}/${lDoc.url}/`, {
+            headers: { "User-Agent": "Mozilla/5.0" },
+            signal: AbortSignal.timeout(4000),
+          });
+          if (lPageRes.ok) {
+            const lHtml = await lPageRes.text();
+            const lyricDiv = lHtml.match(/<div class="lyric-original[^"]*">([\s\S]*?)<\/div>/i);
+            if (lyricDiv) {
+              lyricsText = decodeHtmlEntities(
+                lyricDiv[1]
+                  .replace(/<\/p>/gi, "\n\n")
+                  .replace(/<br\s*\/?>/gi, "\n")
+                  .replace(/<[^>]+>/g, "")
+              ).trim();
+            }
+          }
+        }
+      }
+    }
+  } catch {}
+
+  if (!lyricsText && cifraText) {
+    lyricsText = extractLyricsFromCifra(cifraText);
+  }
+
+  // 6. Find YouTube video ID if still missing
+  if (!youtubeId && (title || searchQuery)) {
+    try {
+      const ytQ = encodeURIComponent(title ? `${artist} ${title}` : searchQuery);
+      const ytRes = await fetch(`https://www.youtube.com/results?search_query=${ytQ}`, {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+        signal: AbortSignal.timeout(4000),
+      });
+      if (ytRes.ok) {
+        const ytHtml = await ytRes.text();
+        const vidMatch = ytHtml.match(/"videoId"\s*:\s*"([a-zA-Z0-9_-]{11})"/);
+        if (vidMatch) youtubeId = vidMatch[1];
+      }
+    } catch {}
+  }
+
+  return {
+    foundCifra: Boolean(cifraText),
+    foundLyrics: Boolean(lyricsText),
+    title: title || searchQuery,
+    artist: artist || "Ministério de Louvor",
+    youtubeId,
+    tom,
+    capo,
+    lyrics: lyricsText,
+    cifra: cifraText,
+    query: title ? (artist ? `${artist} - ${title}` : title) : searchQuery,
+  };
+}
+
 async function handleResolveLink(req, res) {
   let body;
   try {
@@ -316,77 +552,20 @@ async function handleResolveLink(req, res) {
     return res.end(JSON.stringify({ error: "JSON inválido." }));
   }
 
-  const rawUrl = String(body.url || "").trim();
+  const rawUrl = String(body.url || body.query || "").trim();
   if (!rawUrl) {
     res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
-    return res.end(JSON.stringify({ error: "URL não informada." }));
+    return res.end(JSON.stringify({ error: "URL ou busca não informada." }));
   }
 
-  // 1. YouTube Link
-  const ytMatch = rawUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
-  if (ytMatch) {
-    const videoId = ytMatch[1];
-    let title = "";
-    let artist = "";
-    try {
-      const oembedRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`, {
-        signal: AbortSignal.timeout(4000),
-      });
-      if (oembedRes.ok) {
-        const data = await oembedRes.json();
-        title = data.title || "";
-        artist = data.author_name || "";
-      }
-    } catch (e) {
-      console.warn("[resolve-link] Erro oEmbed YouTube:", e.message);
-    }
-
-    let cleanTitle = title;
-    let cleanArtist = artist;
-    if (title.includes(" - ")) {
-      const parts = title.split(" - ");
-      cleanArtist = parts[0].trim();
-      cleanTitle = parts.slice(1).join(" - ").replace(/\s*\([^)]*(?:oficial|clipe|vídeo|video|ao vivo|live)[^)]*\)/gi, "").trim();
-    }
-
+  try {
+    const resolved = await resolveCompleteSong(rawUrl);
     res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-    return res.end(
-      JSON.stringify({
-        type: "youtube",
-        youtubeId: videoId,
-        title: cleanTitle || "Louvor no YouTube",
-        artist: cleanArtist || "Ministério de Louvor",
-        query: cleanTitle ? (cleanArtist ? `${cleanArtist} - ${cleanTitle}` : cleanTitle) : `Música do vídeo ${videoId}`,
-      })
-    );
-  }
-
-  // 2. Cifra Club Link (ex.: https://www.cifraclub.com.br/felipe-rodrigues/tudo-e-perda/)
-  const ccMatch = rawUrl.match(/cifraclub\.com\.br\/([^\/\?#]+)\/([^\/\?#]+)/i);
-  if (ccMatch) {
-    const formatSlug = (s) =>
-      s
-        .split("-")
-        .map((w) => (["e", "de", "da", "do", "das", "dos", "em", "para", "com", "a", "o"].includes(w.toLowerCase()) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1)))
-        .join(" ");
-
-    const artist = formatSlug(ccMatch[1]);
-    const title = formatSlug(ccMatch[2]);
-
+    return res.end(JSON.stringify(resolved));
+  } catch (err) {
     res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-    return res.end(
-      JSON.stringify({
-        type: "cifraclub",
-        artist,
-        title,
-        query: `${artist} - ${title}`,
-        cifraClubUrl: rawUrl,
-      })
-    );
+    return res.end(JSON.stringify({ foundCifra: false, foundLyrics: false, query: rawUrl }));
   }
-
-  res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-  return res.end(JSON.stringify({ type: "generic", query: rawUrl }));
 }
 
 http

@@ -676,7 +676,7 @@ function showHarpaIndex() {
 }
 
 // ---------- Central de Louvor para a Banda da Igreja ----------
-const WORSHIP_STORAGE_KEY = "mestre-pastoral:worship-library";
+const WORSHIP_STORAGE_KEY = "mestre-pastoral:worship-library-v2";
 const CIFRA_STORAGE_PREFIX = "mestre-pastoral:cifra:";
 
 let curBandMode = "duo"; // 'duo' | 'cantor' | 'violao' | 'teclado' | 'bateria'
@@ -741,6 +741,7 @@ const NOTES_FLAT  = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb",
 const CHORD_NOTES_MAP = {
   "C": "Dó - Mi - Sol",
   "Cm": "Dó - Mib - Sol",
+  "Cm7": "Dó - Mib - Sol - Sib",
   "C7": "Dó - Mi - Sol - Sib",
   "C9": "Dó - Mi - Sol - Ré",
   "C#": "Dó# - Fá - Sol#",
@@ -748,6 +749,7 @@ const CHORD_NOTES_MAP = {
   "Db": "Réb - Fá - Láb",
   "D": "Ré - Fá# - Lá",
   "Dm": "Ré - Fá - Lá",
+  "Dm7": "Ré - Fá - Lá - Dó",
   "D7": "Ré - Fá# - Lá - Dó",
   "D9": "Ré - Mi - Fá# - Lá",
   "D#": "Ré# - Sol - Lá#",
@@ -758,6 +760,7 @@ const CHORD_NOTES_MAP = {
   "E7": "Mi - Sol# - Si - Ré",
   "F": "Fá - Lá - Dó",
   "Fm": "Fá - Láb - Dó",
+  "Fm6/D": "Ré - Fá - Láb - Dó",
   "F#": "Fá# - Lá# - Dó#",
   "F#m": "Fá# - Lá - Dó#",
   "F#7": "Fá# - Lá# - Dó# - Mi",
@@ -765,17 +768,22 @@ const CHORD_NOTES_MAP = {
   "G": "Sol - Si - Ré",
   "Gm": "Sol - Sib - Ré",
   "G7": "Sol - Si - Ré - Fá",
+  "G7(4)": "Sol - Dó - Ré - Fá",
+  "G4": "Sol - Dó - Ré",
   "G9": "Sol - Lá - Si - Ré",
   "G#": "Sol# - Dó - Ré#",
   "G#m": "Sol# - Si - Ré#",
   "Ab": "Láb - Dó - Mib",
   "A": "Lá - Dó# - Mi",
   "Am": "Lá - Dó - Mi",
+  "Am7": "Lá - Dó - Mi - Sol",
+  "Am9": "Lá - Si - Dó - Mi",
   "A7": "Lá - Dó# - Mi - Sol",
   "A9": "Lá - Si - Dó# - Mi",
   "A#": "Lá# - Ré - Fá",
   "A#m": "Lá# - Dó# - Fá",
   "Bb": "Sib - Ré - Fá",
+  "Bb7": "Sib - Ré - Fá - Láb",
   "B": "Si - Ré# - Fá#",
   "Bm": "Si - Ré - Fá#",
   "B7": "Si - Ré# - Fá# - Lá"
@@ -783,6 +791,8 @@ const CHORD_NOTES_MAP = {
 
 const GUITAR_CHORD_TABS = {
   "C": "X 3 2 0 1 0",
+  "Cm": "X 3 5 5 4 3",
+  "Cm7": "X 3 5 3 4 3",
   "C#": "X 4 6 6 6 4",
   "C#m": "X 4 6 6 5 4",
   "C#m7": "X 4 6 4 5 4",
@@ -791,6 +801,7 @@ const GUITAR_CHORD_TABS = {
   "C/E": "0 3 2 0 1 0",
   "D": "X X 0 2 3 2",
   "Dm": "X X 0 2 3 1",
+  "Dm7": "X X 0 2 1 1",
   "D7": "X X 0 2 1 2",
   "D9": "X X 0 2 3 0",
   "D/F#": "2 X 0 2 3 2",
@@ -802,6 +813,7 @@ const GUITAR_CHORD_TABS = {
   "E7": "0 2 0 1 0 0",
   "F": "1 3 3 2 1 1",
   "Fm": "1 3 3 1 1 1",
+  "Fm6/D": "X X 0 1 1 1",
   "F7M": "X X 3 2 1 0",
   "F#": "2 4 4 3 2 2",
   "F#m": "2 4 4 2 2 2",
@@ -809,6 +821,8 @@ const GUITAR_CHORD_TABS = {
   "G": "3 2 0 0 0 3",
   "Gm": "3 5 5 3 3 3",
   "G7": "3 2 0 0 0 1",
+  "G7(4)": "3 5 3 5 3 3",
+  "G4": "3 5 5 5 3 3",
   "G9": "3 X 0 2 0 3",
   "G/B": "X 2 0 0 3 3",
   "G#": "4 6 6 5 4 4",
@@ -817,10 +831,12 @@ const GUITAR_CHORD_TABS = {
   "A": "X 0 2 2 2 0",
   "Am": "X 0 2 2 1 0",
   "Am7": "X 0 2 0 1 0",
+  "Am9": "X 0 2 2 0 0",
   "A7": "X 0 2 0 2 0",
   "A9": "X 0 2 2 0 0",
   "A/B": "X 2 2 2 2 0",
   "Bb": "X 1 3 3 3 1",
+  "Bb7": "X 1 3 1 3 1",
   "B": "X 2 4 4 4 2",
   "Bm": "X 2 4 4 3 2",
   "B7": "X 2 1 2 0 2"
@@ -860,6 +876,176 @@ function buildCifraClubChordsBar(transposedCifra, s) {
 }
 
 const BUILTIN_LOUVORES = [
+  {
+    id: "louvor:es-victorino-silva",
+    title: "És",
+    artist: "Victorino Silva",
+    youtubeId: "_5CRM78eyUA",
+    tom: "Cm",
+    bpm: 65,
+    compasso: "4/4",
+    estilo: "Clássico Sacro / Balada",
+    batidaViolao: "Dedilhado suave nos versos; levada lenta e expressiva no refrão (↓  ↓↑  ↑↓↑)",
+    teclado: "Piano clássico expressivo e cordas/strings sustentando os acordes menores e modulações",
+    bateria: "Entrada suave com pratos e aro de caixa; condução solene e bumbo marcado no refrão",
+    lyrics: `[Intro]
+Cm  Ab  Fm6/D  G7(4)  G7
+
+[Primeira Parte]
+És o orvalho que nutre a rosa
+És a rosa que enfeita o jardim
+És o jardim que ornamenta a campina
+És o campo radioso sem fim
+És um raio de luz dentre a sombra
+És a alfombra suave e fiel
+És o manto azulado do espaço
+És o braço que me une aos céus
+
+[Refrão]
+És o sonho ideal da poesia
+Que irradia na rima do verso
+Na candura do meu dia a dia
+O segredo total do universo
+És o berço que embala a criança que nasce
+És a face alegre d'alma remida
+És degrau para eterna subida
+És a vida meu Deus
+És a vida
+
+[Segunda Parte]
+És a ponte que jaz sobre o abismo
+És a fonte dos mananciais
+És o doce marulho das águas
+No deserto és descanso e paz
+Tu que reinas acima da morte
+És o forte que sustenta a cruz
+És o norte que orienta o filho
+És o brilho no olhar de Jesus
+
+[Refrão]
+És o sonho ideal da poesia
+Que irradia na rima do verso
+Na candura do meu dia a dia
+O segredo total do universo
+És o berço que embala a criança que nasce
+És a face alegre d'alma remida
+És degrau para eterna subida
+És a vida meu Deus
+
+[Terceira Parte]
+És a ponte que jaz sobre o abismo
+És a fonte dos mananciais
+És o doce marulho das águas
+No deserto és descanso e paz
+Tu que reinas acima da morte
+És o forte que sustenta a cruz
+És o norte que orienta o filho
+És o brilho no olhar de Jesus
+
+[Final]
+No olhar de Jesus!`,
+    cifra: `[Tom: Cm]
+
+[Intro] Cm  Ab  Fm6/D  G7(4)  G7
+
+[Primeira Parte]
+       Cm                 Fm
+És o orvalho que nutre a rosa
+Bb7                        Eb
+És a rosa que enfeita o jardim
+       G7                     Cm
+És o jardim que ornamenta a campina
+      Ab               G
+És o campo radioso sem fim
+       Cm                    Fm
+És um raio de luz dentre a sombra
+     Bb7               Eb
+És a alfombra suave e fiel
+       G                Cm7
+És o manto azulado do espaço
+      Ab           G        C
+És o braço que me une aos céus
+
+[Refrão]
+       C           Am9  Am
+És o sonho ideal da poesia
+      Dm               G
+Que irradia na rima do verso
+C                Am9   Am
+Na candura do meu dia a dia
+     Dm                 G
+O segredo total do universo
+      C                  Am9   Am
+És o berço que embala a criança que nasce
+      Dm                   G
+És a face alegre d'alma remida
+      Fm               C Am
+És degrau para eterna subida
+      Dm       G
+És a vida meu Deus
+     Fm   C
+És a vi__da
+
+[Segunda Parte]
+    Cm                     Fm
+És a ponte que jaz sobre o abismo
+     Bb           Eb
+És a fonte dos mananciais
+      G7               Cm
+És o doce marulho das águas
+      Ab                 G
+No deserto és descanso e paz
+         Cm            Fm
+Tu que reinas acima da morte
+      Bb              Eb
+És o forte que sustenta a cruz
+      G                     Cm
+És o norte que orienta o filho
+       Ab        G        C
+És o brilho no olhar de Jesus
+
+[Refrão]
+       C              Am9
+És o sonho ideal da poesia
+      Dm7              G7
+Que irradia na rima do verso
+       C           Am7
+Na candura do meu dia a dia
+     Dm7                G7
+O segredo total do universo
+       C                    Am7
+És o berço que embala a criança que nasce
+      Dm7                  G7
+És a face alegre d'alma remida
+     Fm               C Am7
+És degrau para eterna subida
+      Dm7       G
+És a vida meu Deus
+
+[Terceira Parte]
+    Cm                     Fm
+És a ponte que jaz sobre o abismo
+     Bb           Eb
+És a fonte dos mananciais
+    G4 G7               Cm
+És o doce marulho das águas
+      Ab                 G7
+No deserto és descanso e paz
+         Cm            Fm
+Tu que reinas acima da morte
+      Bb              Eb
+És o forte que sustenta a cruz
+      G7                   Cm
+És o norte que orienta o filho
+       Ab
+És o brilho (Oh, És o brilho)
+     Fm6/D G
+És o Brilho (no olhar)
+    Gm        C
+No olhar de Jesus
+
+[Final] C  F  C`
+  },
   {
     id: "louvor:tudo-e-perda",
     title: "Tudo É Perda",
@@ -1691,6 +1877,31 @@ function openCifraModal(song, text) {
   $("#cifraEditText").focus();
 }
 
+function extractLyricsFromCifra(cifraText) {
+  const lines = String(cifraText || "").split(/\r?\n/);
+  const out = [];
+  const isChordToken = (tok) => /^[A-G][#b]?(?:m|maj|min|dim|aug|sus|add|7M|7|9|11|13|6|5|4|2|M|\d|[+\-\/()])*$/.test(tok);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (out.length && out[out.length - 1] !== "") out.push("");
+      continue;
+    }
+    if (/^\[(Tom|Intro|Tab|Solo|Capotraste|Acordes)/i.test(trimmed)) continue;
+    if (/^[EBGDAEebgdae]\|[-0-9hpb/~\s|xX]+/.test(trimmed)) continue;
+    if (/^\[[^\]]+\]$/.test(trimmed)) {
+      out.push(trimmed);
+      continue;
+    }
+    const tokens = trimmed.split(/\s+/);
+    const isChordLine = tokens.every((t) => isChordToken(t) || t === "|" || t === "/" || /^\(\d+x\)$/i.test(t));
+    if (!isChordLine) {
+      out.push(trimmed);
+    }
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 function parseAIWorshipResponse(text, originalQuery) {
   const metaMatch = text.match(/\[METADADOS\]([\s\S]*?)\[FIM_METADADOS\]/i);
   const letraMatch = text.match(/\[LETRA\]([\s\S]*?)\[FIM_LETRA\]/i);
@@ -1751,36 +1962,44 @@ async function handleSongLinkInput(url) {
   const reader = $("#harpaReader");
   reader.innerHTML = `
     <h2>🔗 Link Detectado: Analisando…</h2>
-    <div class="testament">Carregando informações da música e gerando cifra completa no padrão Cifra Club</div>
+    <div class="testament">Buscando letra e cifras 100% reais do Cifra Club & Letras</div>
     <div class="loading" style="padding:40px 10px;text-align:center">
-      🎸 Processando link: <i>${escapeHtml(url)}</i>…<br>
-      <span style="font-size:.85rem;color:var(--muted)">A IA vai gerar a cifra e a letra completa automaticamente. Aguarde alguns segundos.</span>
+      🎸 Processando música: <i>${escapeHtml(url)}</i>…<br>
+      <span style="font-size:.85rem;color:var(--muted)">Obtendo a cifra oficial, letra correta e vídeo do YouTube. Aguarde um instante.</span>
     </div>
   `;
 
   const cleanUrl = url.toLowerCase();
 
-  // Exemplo direto Cifra Club: Tudo É Perda
+  // 1. Atalhos de músicas pré-configuradas na biblioteca
+  if (cleanUrl.includes("_5crm78eyua") || cleanUrl.includes("victorino") || cleanUrl.includes("victorino-silva/s")) {
+    const existing = getWorshipLibrary().find((s) => s.id === "louvor:es-victorino-silva");
+    if (existing) {
+      toast("Música 'És' de Victorino Silva aberta com cifra oficial! 🎸");
+      openSongForBand(existing);
+      return;
+    }
+  }
+
   if (cleanUrl.includes("tudo-e-perda") || cleanUrl.includes("9sj0manxv_8")) {
     const existing = getWorshipLibrary().find((s) => s.id === "louvor:tudo-e-perda");
     if (existing) {
-      toast("Música aberta no padrão Cifra Club! 🎸");
+      toast("Música 'Tudo É Perda' aberta no padrão Cifra Club! 🎸");
       openSongForBand(existing);
       return;
     }
   }
 
-  // Exemplo direto YouTube: Não Há Barreiras
   if (cleanUrl.includes("tvlbjwdzu0m") || cleanUrl.includes("nao-ha-barreiras")) {
     const existing = getWorshipLibrary().find((s) => s.id === "louvor:nao-ha-barreiras");
     if (existing) {
-      toast("Música aberta no padrão Cifra Club! 🎸");
+      toast("Música 'Não Há Barreiras' aberta no padrão Cifra Club! 🎸");
       openSongForBand(existing);
       return;
     }
   }
 
-  // Resolve pelo servidor (título, autor, ID do vídeo)
+  // 2. Resolve no servidor (YouTube oEmbed + Cifra Club Solr/HTML + Letras.mus.br)
   let resolved = null;
   try {
     const res = await fetch("/api/resolve-link", {
@@ -1795,37 +2014,104 @@ async function handleSongLinkInput(url) {
     console.warn("Erro ao resolver link:", e);
   }
 
-  const query = resolved && resolved.query ? resolved.query : url;
-  const youtubeId = (resolved && resolved.youtubeId) ? resolved.youtubeId : extractYoutubeId(url);
-
-  // Verifica se já temos essa música salva
-  const normQ = norm(query);
-  const matchInLib = getWorshipLibrary().find((s) => norm(s.title).includes(normQ) || normQ.includes(norm(s.title)));
-  if (matchInLib) {
-    if (youtubeId && !matchInLib.youtubeId) matchInLib.youtubeId = youtubeId;
-    toast("Música pronta no padrão Cifra Club! 🎸");
-    openSongForBand(matchInLib);
+  // 3. Se achou no Cifra Club: NUNCA gera por IA da cabeça! Usa a cifra e letra 100% REAIS
+  if (resolved && resolved.foundCifra && resolved.cifra) {
+    const song = {
+      id: "louvor:" + (norm(resolved.title || "musica").replace(/[^a-z0-9]+/g, "-") || "musica"),
+      isHarpa: false,
+      n: null,
+      title: resolved.title || "Louvor da Igreja",
+      artist: resolved.artist || "Ministério de Louvor",
+      youtubeId: resolved.youtubeId || extractYoutubeId(url) || null,
+      tom: resolved.tom || "G",
+      capo: resolved.capo || "",
+      bpm: 70,
+      compasso: "4/4",
+      estilo: "Worship / Louvor",
+      batidaViolao: "Dedilhado suave nos versos; levada 4/4 crescente no refrão",
+      teclado: "Pad ambiente sustentando acordes e piano acústico",
+      bateria: "Condução suave no chimbal e bumbo marcante no refrão",
+      lyrics: resolved.lyrics || extractLyricsFromCifra(resolved.cifra),
+      cifra: resolved.cifra
+    };
+    saveCustomWorship(song);
+    toast("Música e cifra oficiais do Cifra Club carregadas! 🎸");
+    openSongForBand(song);
     return;
   }
 
-  await generateAILouvor(query, youtubeId);
+  const query = resolved && resolved.query ? resolved.query : url;
+  const youtubeId = (resolved && resolved.youtubeId) ? resolved.youtubeId : extractYoutubeId(url);
+  const officialLyrics = resolved && resolved.foundLyrics ? resolved.lyrics : null;
+
+  await generateAILouvor(query, youtubeId, officialLyrics);
 }
 
-async function generateAILouvor(query, forcedYoutubeId = null) {
+async function generateAILouvor(query, forcedYoutubeId = null, officialLyrics = null) {
   const ytMatch = forcedYoutubeId || extractYoutubeId(query);
-  if (ytMatch === "TVlBJwDZu0M" || query.toLowerCase().includes("nao-ha-barreiras")) {
+  const cleanQ = query.toLowerCase();
+
+  if (ytMatch === "_5CRM78eyUA" || cleanQ.includes("victorino") || cleanQ.includes("és")) {
+    const existing = getWorshipLibrary().find((s) => s.youtubeId === "_5CRM78eyUA" || s.id === "louvor:es-victorino-silva");
+    if (existing) {
+      openSongForBand(existing);
+      return;
+    }
+  }
+  if (ytMatch === "TVlBJwDZu0M" || cleanQ.includes("nao-ha-barreiras") || cleanQ.includes("não há barreiras")) {
     const existing = getWorshipLibrary().find((s) => s.youtubeId === "TVlBJwDZu0M" || s.id === "louvor:nao-ha-barreiras");
     if (existing) {
       openSongForBand(existing);
       return;
     }
   }
-  if (ytMatch === "9Sj0manxV_8" || query.toLowerCase().includes("tudo-e-perda") || query.toLowerCase().includes("tudo é perda")) {
+  if (ytMatch === "9Sj0manxV_8" || cleanQ.includes("tudo-e-perda") || cleanQ.includes("tudo é perda")) {
     const existing = getWorshipLibrary().find((s) => s.id === "louvor:tudo-e-perda");
     if (existing) {
       openSongForBand(existing);
       return;
     }
+  }
+
+  // Tenta resolver no servidor para pegar Cifra Club ou letra oficial antes de recorrer a IA
+  if (!officialLyrics) {
+    try {
+      const rRes = await fetch("/api/resolve-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: query })
+      });
+      if (rRes.ok) {
+        const rData = await rRes.json();
+        if (rData.foundCifra && rData.cifra) {
+          const song = {
+            id: "louvor:" + (norm(rData.title || query).replace(/[^a-z0-9]+/g, "-") || "musica"),
+            isHarpa: false,
+            n: null,
+            title: rData.title || query,
+            artist: rData.artist || "Ministério de Louvor",
+            youtubeId: rData.youtubeId || ytMatch || null,
+            tom: rData.tom || "G",
+            capo: rData.capo || "",
+            bpm: 70,
+            compasso: "4/4",
+            estilo: "Worship / Louvor",
+            batidaViolao: "Dedilhado suave nos versos; levada 4/4 crescente no refrão",
+            teclado: "Pad ambiente sustentando acordes e piano acústico",
+            bateria: "Condução suave no chimbal e bumbo marcante no refrão",
+            lyrics: rData.lyrics || extractLyricsFromCifra(rData.cifra),
+            cifra: rData.cifra
+          };
+          saveCustomWorship(song);
+          toast("Música e cifra oficiais do Cifra Club carregadas! 🎸");
+          openSongForBand(song);
+          return;
+        }
+        if (rData.foundLyrics && rData.lyrics) {
+          officialLyrics = rData.lyrics;
+        }
+      }
+    } catch {}
   }
 
   setView("harpa");
@@ -1839,10 +2125,14 @@ async function generateAILouvor(query, forcedYoutubeId = null) {
     <h2>Buscando Louvor: “${escapeHtml(query)}”…</h2>
     <div class="testament">O Mestre Pastoral está montando a música 100% COMPLETA no padrão Cifra Club</div>
     <div class="loading" style="padding:40px 10px;text-align:center">
-      🎸 Gerando Cifra e Letra no padrão Cifra Club com acordes alinhados e todas as partes…<br>
+      🎸 Preparando Cifra e Letra no padrão Cifra Club com acordes alinhados e todas as partes…<br>
       <span style="font-size:.85rem;color:var(--muted)">Aguarde alguns segundos enquanto a música completa é preparada.</span>
     </div>
   `;
+
+  const promptText = officialLyrics
+    ? `Gere a música e cifra COMPLETA no rigoroso PADRÃO CIFRA CLUB da canção '${query}'. Siga o FLUXO 4: [METADADOS], [LETRA] e [CIFRA].\nIMPORTANTE: A letra OFICIAL e REAL da música é OBRIGATORIAMENTE esta abaixo. NÃO INVENTE NENHUMA PALAVRA E NÃO ALTERE A LETRA:\n[LETRA_OFICIAL]\n${officialLyrics}\n[FIM_LETRA_OFICIAL]`
+    : `Gere a música e cifra COMPLETA no rigoroso PADRÃO CIFRA CLUB da canção '${query}'. Siga o FLUXO 4: [METADADOS] (com Tom, Capotraste se houver, lista de Acordes, BPM e Batida), [LETRA] completa verso a verso e [CIFRA] 100% integral do início ao fim com todas as etiquetas padrão ([Intro], [Primeira Parte], [Pré-Refrão], [Refrão], [Segunda Parte], [Interlúdio], [Ponte], [Refrão Final], [Final]). Sem resumos nem abreviações.`;
 
   try {
     const res = await fetch("/api/chat", {
@@ -1852,7 +2142,7 @@ async function generateAILouvor(query, forcedYoutubeId = null) {
         mode: "louvor",
         messages: [{
           role: "user",
-          text: `Gere a música e cifra COMPLETA no rigoroso PADRÃO CIFRA CLUB da canção '${query}'. Siga o FLUXO 4: [METADADOS] (com Tom, Capotraste se houver, lista de Acordes, BPM e Batida), [LETRA] completa verso a verso e [CIFRA] 100% integral do início ao fim com todas as etiquetas padrão ([Intro], [Primeira Parte], [Pré-Refrão], [Refrão], [Segunda Parte], [Interlúdio], [Ponte], [Refrão Final], [Final]). Sem resumos nem abreviações.`
+          text: promptText
         }]
       })
     });
@@ -1871,6 +2161,7 @@ async function generateAILouvor(query, forcedYoutubeId = null) {
     if (result.trim()) {
       const parsedSong = parseAIWorshipResponse(result, query);
       if (ytMatch) parsedSong.youtubeId = ytMatch;
+      if (officialLyrics) parsedSong.lyrics = officialLyrics;
       saveCustomWorship(parsedSong);
       toast("Cifra gerada no padrão Cifra Club! 🎸");
       openSongForBand(parsedSong);
