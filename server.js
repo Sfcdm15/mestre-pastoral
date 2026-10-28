@@ -15,7 +15,16 @@ if (fs.existsSync(envPath)) {
 
 const PORT = Number(process.env.PORT) || 3000;
 const API_KEY = process.env.GEMINI_API_KEY;
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+const PRIMARY_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+const MODEL_FALLBACK_LIST = [
+  PRIMARY_MODEL,
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-2.0-flash",
+  "gemini-2.0-flash-lite",
+  "gemma-3-27b-it",
+].filter((m, i, arr) => arr.indexOf(m) === i);
+
 const ADMIN_PIN = process.env.ADMIN_PIN || "pastor2026";
 const SYSTEM_PROMPT = fs.readFileSync(path.join(__dirname, "prompt.md"), "utf8");
 const PUBLIC_DIR = path.join(__dirname, "public");
@@ -95,29 +104,72 @@ async function handleChat(req, res) {
     return { role: m.role === "model" ? "model" : "user", parts: [{ text }] };
   });
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:streamGenerateContent?alt=sse`;
+  let upstream = null;
+  let lastStatus = 502;
+  let lastErrorDetail = "";
+  let activeModel = PRIMARY_MODEL;
 
-  let upstream;
-  try {
-    upstream = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": API_KEY },
-      body: JSON.stringify({
+  for (let i = 0; i < MODEL_FALLBACK_LIST.length; i++) {
+    const candidateModel = MODEL_FALLBACK_LIST[i];
+    const isGemma = candidateModel.toLowerCase().startsWith("gemma");
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${candidateModel}:streamGenerateContent?alt=sse`;
+
+    let requestBody;
+    if (isGemma) {
+      const gemmaContents = contents.map((c) => ({
+        role: c.role,
+        parts: c.parts.map((p) => ({ ...p })),
+      }));
+      if (gemmaContents.length > 0 && gemmaContents[0].role === "user") {
+        gemmaContents[0].parts[0].text = `[DIRETRIZES DE PASTOR/ESTUDO BÍBLICO]\n${SYSTEM_PROMPT}\n[FIM DAS DIRETRIZES]\n\n${gemmaContents[0].parts[0].text || ""}`;
+      } else {
+        gemmaContents.unshift({
+          role: "user",
+          parts: [{ text: `[DIRETRIZES DE PASTOR/ESTUDO BÍBLICO]\n${SYSTEM_PROMPT}\n[FIM DAS DIRETRIZES]` }],
+        });
+      }
+      requestBody = {
+        contents: gemmaContents,
+        generationConfig: { temperature: 0.4, maxOutputTokens: 4096 },
+      };
+    } else {
+      requestBody = {
         system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
         contents,
         generationConfig: { temperature: 0.4, maxOutputTokens: 4096 },
-      }),
-    });
-  } catch (err) {
-    res.writeHead(502, { "Content-Type": "text/plain; charset=utf-8" });
-    return res.end("Não foi possível conectar à API do Gemini: " + err.message);
+      };
+    }
+
+    try {
+      const resAttempt = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": API_KEY },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (resAttempt.ok) {
+        upstream = resAttempt;
+        activeModel = candidateModel;
+        if (i > 0) {
+          console.log(`[Rodízio IA] Alternado em milissegundos para ${candidateModel} (modelo anterior esgotado/ocupado).`);
+        }
+        break;
+      }
+
+      lastStatus = resAttempt.status;
+      lastErrorDetail = await resAttempt.text();
+      console.warn(`[Rodízio IA] Modelo ${candidateModel} retornou status ${resAttempt.status}. Alternando para o próximo...`);
+    } catch (err) {
+      lastStatus = 502;
+      lastErrorDetail = err.message;
+      console.warn(`[Rodízio IA] Falha de conexão com ${candidateModel}: ${err.message}. Alternando para o próximo...`);
+    }
   }
 
-  if (!upstream.ok) {
-    const detail = await upstream.text();
-    console.error("Erro Gemini:", upstream.status, detail);
+  if (!upstream || !upstream.ok) {
+    console.error("Todos os modelos da fila falharam:", lastStatus, lastErrorDetail);
     res.writeHead(502, { "Content-Type": "text/plain; charset=utf-8" });
-    return res.end(`Erro da API do Gemini (${upstream.status}). Veja o console do servidor.`);
+    return res.end(`Erro da API (${lastStatus}). Todos os 6 modelos de rodízio foram testados.`);
   }
 
   res.writeHead(200, {
@@ -258,7 +310,7 @@ http
     if (req.url === "/api/oferta") return handleOferta(req, res);
     if (req.method === "GET" && req.url === "/api/health") {
       res.writeHead(200, { "Content-Type": "application/json" });
-      return res.end(JSON.stringify({ ok: true, model: MODEL, apiKey: Boolean(API_KEY) }));
+      return res.end(JSON.stringify({ ok: true, primaryModel: PRIMARY_MODEL, models: MODEL_FALLBACK_LIST, apiKey: Boolean(API_KEY) }));
     }
     if (req.method === "GET") return serveStatic(req, res);
     res.writeHead(405);
@@ -274,5 +326,6 @@ http
     console.log(`\n📖 Mestre Pastoral rodando:`);
     console.log(`   Computador: http://localhost:${PORT}`);
     if (lan) console.log(`   Celular (mesmo Wi-Fi): http://${lan}:${PORT}`);
-    console.log(`   Modelo: ${MODEL} | Chave da API: ${API_KEY ? "OK" : "FALTANDO (.env)"}\n`);
+    console.log(`   Modelos (Fila de 6 com Rodízio): ${MODEL_FALLBACK_LIST.join(" -> ")}`);
+    console.log(`   Chave da API: ${API_KEY ? "OK" : "FALTANDO (.env)"}\n`);
   });

@@ -1000,7 +1000,34 @@ async function loadOferta(triggerRedirect = false) {
   renderOferta(triggerRedirect);
 }
 
+function isAdmDevice() {
+  try {
+    const host = typeof location !== "undefined" ? location.hostname : "";
+    const search = typeof location !== "undefined" ? location.search : "";
+    if (host === "localhost" || host === "127.0.0.1" || host.startsWith("192.168.")) return true;
+    if (search.includes("adm")) return true;
+    if (localStorage.getItem("mestre-pastoral:is-adm") === "1") return true;
+  } catch {}
+  return false;
+}
+
 function initOfertaEvents() {
+  const admBtn = $("#toggleAdmBtn");
+  if (admBtn) {
+    admBtn.hidden = !isAdmDevice();
+  }
+
+  // Atalho secreto: tocar 5 vezes no selo "❤️ Generosidade que Transforma Vidas" revela o botão do ADM em qualquer aparelho
+  let secretClicks = 0;
+  $("#ofertaSecretBadge")?.addEventListener("click", () => {
+    secretClicks++;
+    if (secretClicks >= 5 && admBtn) {
+      admBtn.hidden = false;
+      admBtn.click();
+      secretClicks = 0;
+    }
+  });
+
   $("#homeOfertaBanner")?.addEventListener("click", () => setView("oferta"));
   $("#homeOfertaBtn")?.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -1037,7 +1064,10 @@ function initOfertaEvents() {
         return;
       }
       admPinSession = pin.trim();
-      try { sessionStorage.setItem("mestre-pastoral:adm-pin", admPinSession); } catch {}
+      try {
+        sessionStorage.setItem("mestre-pastoral:adm-pin", admPinSession);
+        localStorage.setItem("mestre-pastoral:is-adm", "1");
+      } catch {}
       populateAdmForm();
       panel.hidden = false;
       panel.scrollIntoView({ behavior: "smooth", block: "start" });
