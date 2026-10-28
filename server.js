@@ -307,9 +307,92 @@ async function handleOferta(req, res) {
   res.end();
 }
 
+async function handleResolveLink(req, res) {
+  let body;
+  try {
+    body = JSON.parse(await readBody(req));
+  } catch {
+    res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+    return res.end(JSON.stringify({ error: "JSON inválido." }));
+  }
+
+  const rawUrl = String(body.url || "").trim();
+  if (!rawUrl) {
+    res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+    return res.end(JSON.stringify({ error: "URL não informada." }));
+  }
+
+  // 1. YouTube Link
+  const ytMatch = rawUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+  if (ytMatch) {
+    const videoId = ytMatch[1];
+    let title = "";
+    let artist = "";
+    try {
+      const oembedRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`, {
+        signal: AbortSignal.timeout(4000),
+      });
+      if (oembedRes.ok) {
+        const data = await oembedRes.json();
+        title = data.title || "";
+        artist = data.author_name || "";
+      }
+    } catch (e) {
+      console.warn("[resolve-link] Erro oEmbed YouTube:", e.message);
+    }
+
+    let cleanTitle = title;
+    let cleanArtist = artist;
+    if (title.includes(" - ")) {
+      const parts = title.split(" - ");
+      cleanArtist = parts[0].trim();
+      cleanTitle = parts.slice(1).join(" - ").replace(/\s*\([^)]*(?:oficial|clipe|vídeo|video|ao vivo|live)[^)]*\)/gi, "").trim();
+    }
+
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    return res.end(
+      JSON.stringify({
+        type: "youtube",
+        youtubeId: videoId,
+        title: cleanTitle || "Louvor no YouTube",
+        artist: cleanArtist || "Ministério de Louvor",
+        query: cleanTitle ? (cleanArtist ? `${cleanArtist} - ${cleanTitle}` : cleanTitle) : `Música do vídeo ${videoId}`,
+      })
+    );
+  }
+
+  // 2. Cifra Club Link (ex.: https://www.cifraclub.com.br/felipe-rodrigues/tudo-e-perda/)
+  const ccMatch = rawUrl.match(/cifraclub\.com\.br\/([^\/\?#]+)\/([^\/\?#]+)/i);
+  if (ccMatch) {
+    const formatSlug = (s) =>
+      s
+        .split("-")
+        .map((w) => (["e", "de", "da", "do", "das", "dos", "em", "para", "com", "a", "o"].includes(w.toLowerCase()) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1)))
+        .join(" ");
+
+    const artist = formatSlug(ccMatch[1]);
+    const title = formatSlug(ccMatch[2]);
+
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    return res.end(
+      JSON.stringify({
+        type: "cifraclub",
+        artist,
+        title,
+        query: `${artist} - ${title}`,
+        cifraClubUrl: rawUrl,
+      })
+    );
+  }
+
+  res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+  return res.end(JSON.stringify({ type: "generic", query: rawUrl }));
+}
+
 http
   .createServer((req, res) => {
     if (req.method === "POST" && req.url === "/api/chat") return handleChat(req, res);
+    if (req.method === "POST" && req.url === "/api/resolve-link") return handleResolveLink(req, res);
     if (req.url === "/api/oferta") return handleOferta(req, res);
     if (req.method === "GET" && req.url === "/api/health") {
       res.writeHead(200, { "Content-Type": "application/json" });

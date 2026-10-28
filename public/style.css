@@ -670,6 +670,87 @@ button { font: inherit; }
   border: 1px solid #ffcccc;
 }
 
+/* Barra de Acordes do Cifra Club (Diagramas e Shapes) */
+.cifraclub-chords-bar {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin: 12px 0 16px;
+  box-shadow: var(--shadow-sm);
+}
+.cifraclub-chords-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.cifraclub-chords-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--brown);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cifra-capo-pill {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #b85d19;
+  background: #fdf3e7;
+  border: 1px solid #f5cf9e;
+  padding: 3px 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.cifraclub-chords-list {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.cifraclub-chord-box {
+  background: #fffdfa;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  min-width: 82px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
+}
+.cifraclub-chord-box:hover {
+  border-color: var(--gold);
+  transform: translateY(-2px);
+}
+.cc-chord-name {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #c47c1a;
+  font-family: "Courier New", monospace;
+}
+.cc-chord-shape {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+  font-family: "Courier New", monospace;
+  margin: 3px 0;
+}
+.cc-chord-notes {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
 /* Modo Cantor */
 .cantor-container {
   max-width: 760px;

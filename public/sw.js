@@ -1,6 +1,6 @@
 // Service Worker — Mestre Pastoral
 // Estratégia: cache-first para a Bíblia; network-first (com fallback offline) para a interface
-const CACHE_NAME = "mestre-pastoral-v13";
+const CACHE_NAME = "mestre-pastoral-v14";
 
 const ASSETS_TO_CACHE = [
   "/",

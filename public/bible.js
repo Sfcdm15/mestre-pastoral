@@ -781,7 +781,207 @@ const CHORD_NOTES_MAP = {
   "B7": "Si - Ré# - Fá# - Lá"
 };
 
+const GUITAR_CHORD_TABS = {
+  "C": "X 3 2 0 1 0",
+  "C#": "X 4 6 6 6 4",
+  "C#m": "X 4 6 6 5 4",
+  "C#m7": "X 4 6 4 5 4",
+  "C7": "X 3 2 3 1 0",
+  "C9": "X 3 2 0 3 0",
+  "C/E": "0 3 2 0 1 0",
+  "D": "X X 0 2 3 2",
+  "Dm": "X X 0 2 3 1",
+  "D7": "X X 0 2 1 2",
+  "D9": "X X 0 2 3 0",
+  "D/F#": "2 X 0 2 3 2",
+  "D#": "X 6 8 8 8 6",
+  "Eb": "X 6 8 8 8 6",
+  "E": "0 2 2 1 0 0",
+  "Em": "0 2 2 0 0 0",
+  "Em7": "0 2 2 0 3 0",
+  "E7": "0 2 0 1 0 0",
+  "F": "1 3 3 2 1 1",
+  "Fm": "1 3 3 1 1 1",
+  "F7M": "X X 3 2 1 0",
+  "F#": "2 4 4 3 2 2",
+  "F#m": "2 4 4 2 2 2",
+  "F#7": "2 4 2 3 2 2",
+  "G": "3 2 0 0 0 3",
+  "Gm": "3 5 5 3 3 3",
+  "G7": "3 2 0 0 0 1",
+  "G9": "3 X 0 2 0 3",
+  "G/B": "X 2 0 0 3 3",
+  "G#": "4 6 6 5 4 4",
+  "G#m": "4 6 6 4 4 4",
+  "Ab": "4 6 6 5 4 4",
+  "A": "X 0 2 2 2 0",
+  "Am": "X 0 2 2 1 0",
+  "Am7": "X 0 2 0 1 0",
+  "A7": "X 0 2 0 2 0",
+  "A9": "X 0 2 2 0 0",
+  "A/B": "X 2 2 2 2 0",
+  "Bb": "X 1 3 3 3 1",
+  "B": "X 2 4 4 4 2",
+  "Bm": "X 2 4 4 3 2",
+  "B7": "X 2 1 2 0 2"
+};
+
+function buildCifraClubChordsBar(transposedCifra, s) {
+  const uniqueChords = extractUniqueChords(transposedCifra);
+  if (!uniqueChords || uniqueChords.length === 0) return "";
+
+  const chordBoxesHtml = uniqueChords.map(ch => {
+    const shape = GUITAR_CHORD_TABS[ch] || GUITAR_CHORD_TABS[ch.replace(/m|7|9/g, "")] || "Violão";
+    const notes = CHORD_NOTES_MAP[ch] || CHORD_NOTES_MAP[ch.replace(/m|7|9/g, "")] || "Acorde";
+    return `
+      <div class="cifraclub-chord-box" title="Acorde ${escapeHtml(ch)}: ${escapeHtml(notes)}">
+        <span class="cc-chord-name">${escapeHtml(ch)}</span>
+        <span class="cc-chord-shape">${escapeHtml(shape)}</span>
+        <span class="cc-chord-notes">${escapeHtml(notes)}</span>
+      </div>
+    `;
+  }).join("");
+
+  const capoHtml = s.capo ? `<span class="cifra-capo-pill">🎸 Capotraste: ${escapeHtml(s.capo)}</span>` : "";
+
+  return `
+    <div class="cifraclub-chords-bar">
+      <div class="cifraclub-chords-header">
+        <div class="cifraclub-chords-label">
+          🎸 <b>Acordes da Música (Padrão Cifra Club):</b>
+        </div>
+        ${capoHtml}
+      </div>
+      <div class="cifraclub-chords-list">
+        ${chordBoxesHtml}
+      </div>
+    </div>
+  `;
+}
+
 const BUILTIN_LOUVORES = [
+  {
+    id: "louvor:tudo-e-perda",
+    title: "Tudo É Perda",
+    artist: "Felipe Rodrigues",
+    youtubeId: "9Sj0manxV_8",
+    tom: "C",
+    capo: "1ª casa (Tom original: C#)",
+    bpm: 68,
+    compasso: "4/4",
+    estilo: "Worship / Adoração",
+    batidaViolao: "Dedilhado suave na primeira parte; levada worship 4/4 crescente no refrão (↓  ↓↑  ↑↓↑)",
+    teclado: "Pad ambiente atmosférico sustentando acordes de C, Am, G e F; condução suave no piano acústico",
+    bateria: "Começo suave com pratos e aro de caixa; dinâmica crescente a partir da segunda parte e bumbo marcado no refrão",
+    lyrics: `[Intro]
+C  Am  G  F
+
+[Primeira Parte]
+Tudo é perda se não tenho a Ti
+A Tua graça é o que me basta
+Sem Você, não sei pra onde ir
+Sem Tua presença, nada importa
+
+[Segunda Parte]
+Do que adianta eu ganhar o mundo inteiro
+E a minha alma se perder sem Ti, Senhor?
+Do que adianta eu juntar os meus tesouros
+E me esquecer daquele que me amou?
+
+[Refrão]
+Se eu não tenho a Ti, não tenho nada
+Nada eu serei sem Ti, Senhor
+Só Tua presença é o que me basta
+Eu Te levarei por onde eu for
+
+[Interlúdio]
+Dm  G  C/E  F
+Dm  G  C/E  F
+
+[Ponte]
+Tua presença é o que me basta
+Quem sou eu sem Teu amor, Senhor?
+Tua presença é o que me basta
+Quem sou eu sem Teu amor, Senhor?
+
+[Refrão Final]
+Se eu não tenho a Ti, não tenho nada
+Nada eu serei sem Ti, Senhor
+Só Tua presença é o que me basta
+Eu Te levarei por onde eu for
+
+[Final]
+Se eu não tenho a Ti, não tenho nada
+Eu Te levarei por onde eu for
+Por onde eu for!`,
+    cifra: `[Tom: C]
+[Capotraste: 1ª casa (Tom original: C#)]
+
+[Intro]
+C  Am  G  F
+
+[Primeira Parte]
+C                   Am
+Tudo é perda se não tenho a Ti
+G                         F
+A Tua graça é o que me basta
+C                   Am
+Sem Você, não sei pra onde ir
+G                           F
+Sem Tua presença, nada importa
+
+[Segunda Parte]
+F                                  G
+Do que adianta eu ganhar o mundo inteiro
+C/E                                     F
+E a minha alma se perder sem Ti, Senhor?
+F                                    G
+Do que adianta eu juntar os meus tesouros
+C/E                                  F
+E me esquecer daquele que me amou?
+
+[Refrão]
+Dm    C           G
+Se eu não tenho a Ti, não tenho nada
+C/E                         F
+Nada eu serei sem Ti, Senhor
+Dm    C             G
+Só Tua presença é o que me basta
+C/E                          F
+Eu Te levarei por onde eu for
+
+[Interlúdio]
+Dm  G  C/E  F
+Dm  G  C/E  F
+
+[Ponte]
+Dm                    G
+Tua presença é o que me basta
+C/E                                   F
+Quem sou eu sem Teu amor, Senhor?
+Dm                    G
+Tua presença é o que me basta
+C/E                                   F
+Quem sou eu sem Teu amor, Senhor?
+
+[Refrão Final]
+Dm    C           G
+Se eu não tenho a Ti, não tenho nada
+C/E                         F
+Nada eu serei sem Ti, Senhor
+Dm    C             G
+Só Tua presença é o que me basta
+C/E                          F
+Eu Te levarei por onde eu for
+
+[Final]
+Dm    C           G
+Se eu não tenho a Ti, não tenho nada
+C/E                          F
+Eu Te levarei por onde eu for
+C
+Por onde eu for!`
+  },
   {
     id: "louvor:bondade-de-deus",
     title: "Bondade de Deus",
@@ -1517,6 +1717,7 @@ function parseAIWorshipResponse(text, originalQuery) {
 
   const ytRaw = getField("YouTube|Video|Link", "");
   const youtubeId = extractYoutubeId(ytRaw) || extractYoutubeId(originalQuery) || null;
+  const capo = getField("Capotraste|Capo", "");
 
   const id = "custom:" + norm(title).replace(/[^a-z0-9]+/g, "-");
   return {
@@ -1527,6 +1728,7 @@ function parseAIWorshipResponse(text, originalQuery) {
     artist,
     youtubeId,
     tom,
+    capo,
     bpm,
     compasso,
     estilo,
@@ -1538,10 +1740,88 @@ function parseAIWorshipResponse(text, originalQuery) {
   };
 }
 
-async function generateAILouvor(query) {
-  const ytMatch = extractYoutubeId(query);
-  if (ytMatch === "TVlBJwDZu0M") {
+async function handleSongLinkInput(url) {
+  if (!url) return;
+  setView("harpa");
+  $("#harpaIndexView").hidden = true;
+  $("#harpaReaderView").hidden = false;
+  stopMetronome();
+  if (isCifraAutoScrolling) toggleCifraAutoScroll();
+
+  const reader = $("#harpaReader");
+  reader.innerHTML = `
+    <h2>🔗 Link Detectado: Analisando…</h2>
+    <div class="testament">Carregando informações da música e gerando cifra completa no padrão Cifra Club</div>
+    <div class="loading" style="padding:40px 10px;text-align:center">
+      🎸 Processando link: <i>${escapeHtml(url)}</i>…<br>
+      <span style="font-size:.85rem;color:var(--muted)">A IA vai gerar a cifra e a letra completa automaticamente. Aguarde alguns segundos.</span>
+    </div>
+  `;
+
+  const cleanUrl = url.toLowerCase();
+
+  // Exemplo direto Cifra Club: Tudo É Perda
+  if (cleanUrl.includes("tudo-e-perda") || cleanUrl.includes("9sj0manxv_8")) {
+    const existing = getWorshipLibrary().find((s) => s.id === "louvor:tudo-e-perda");
+    if (existing) {
+      toast("Música aberta no padrão Cifra Club! 🎸");
+      openSongForBand(existing);
+      return;
+    }
+  }
+
+  // Exemplo direto YouTube: Não Há Barreiras
+  if (cleanUrl.includes("tvlbjwdzu0m") || cleanUrl.includes("nao-ha-barreiras")) {
+    const existing = getWorshipLibrary().find((s) => s.id === "louvor:nao-ha-barreiras");
+    if (existing) {
+      toast("Música aberta no padrão Cifra Club! 🎸");
+      openSongForBand(existing);
+      return;
+    }
+  }
+
+  // Resolve pelo servidor (título, autor, ID do vídeo)
+  let resolved = null;
+  try {
+    const res = await fetch("/api/resolve-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url })
+    });
+    if (res.ok) {
+      resolved = await res.json();
+    }
+  } catch (e) {
+    console.warn("Erro ao resolver link:", e);
+  }
+
+  const query = resolved && resolved.query ? resolved.query : url;
+  const youtubeId = (resolved && resolved.youtubeId) ? resolved.youtubeId : extractYoutubeId(url);
+
+  // Verifica se já temos essa música salva
+  const normQ = norm(query);
+  const matchInLib = getWorshipLibrary().find((s) => norm(s.title).includes(normQ) || normQ.includes(norm(s.title)));
+  if (matchInLib) {
+    if (youtubeId && !matchInLib.youtubeId) matchInLib.youtubeId = youtubeId;
+    toast("Música pronta no padrão Cifra Club! 🎸");
+    openSongForBand(matchInLib);
+    return;
+  }
+
+  await generateAILouvor(query, youtubeId);
+}
+
+async function generateAILouvor(query, forcedYoutubeId = null) {
+  const ytMatch = forcedYoutubeId || extractYoutubeId(query);
+  if (ytMatch === "TVlBJwDZu0M" || query.toLowerCase().includes("nao-ha-barreiras")) {
     const existing = getWorshipLibrary().find((s) => s.youtubeId === "TVlBJwDZu0M" || s.id === "louvor:nao-ha-barreiras");
+    if (existing) {
+      openSongForBand(existing);
+      return;
+    }
+  }
+  if (ytMatch === "9Sj0manxV_8" || query.toLowerCase().includes("tudo-e-perda") || query.toLowerCase().includes("tudo é perda")) {
+    const existing = getWorshipLibrary().find((s) => s.id === "louvor:tudo-e-perda");
     if (existing) {
       openSongForBand(existing);
       return;
@@ -1557,10 +1837,10 @@ async function generateAILouvor(query) {
   const reader = $("#harpaReader");
   reader.innerHTML = `
     <h2>Buscando Louvor: “${escapeHtml(query)}”…</h2>
-    <div class="testament">O Mestre Pastoral está montando a música 100% COMPLETA para a banda</div>
+    <div class="testament">O Mestre Pastoral está montando a música 100% COMPLETA no padrão Cifra Club</div>
     <div class="loading" style="padding:40px 10px;text-align:center">
-      🎸 Gerando Letra Completa sem cortes para o Cantor, Cifras Integrais para Violão e Teclado, e Ritmo para a Bateria…<br>
-      <span style="font-size:.85rem;color:var(--muted)">Aguarde alguns segundos enquanto todas as estrofes, refrões e pontes são preparados.</span>
+      🎸 Gerando Cifra e Letra no padrão Cifra Club com acordes alinhados e todas as partes…<br>
+      <span style="font-size:.85rem;color:var(--muted)">Aguarde alguns segundos enquanto a música completa é preparada.</span>
     </div>
   `;
 
@@ -1572,7 +1852,7 @@ async function generateAILouvor(query) {
         mode: "louvor",
         messages: [{
           role: "user",
-          text: `Gere a música de louvor COMPLETA '${query}' para a equipe de louvor e banda da igreja, 100% integral do início ao fim sem nenhum corte ou resumo. É OBRIGATÓRIO incluir TODAS as estrofes, TODOS os refrões por extenso (repetindo a letra e os acordes todas as vezes que a música canta, sem usar atalhos como '(repete)' ou '2x'), todas as pontes e o final. Siga com rigor absoluto o FLUXO 4: [METADADOS], [LETRA] e [CIFRA].`
+          text: `Gere a música e cifra COMPLETA no rigoroso PADRÃO CIFRA CLUB da canção '${query}'. Siga o FLUXO 4: [METADADOS] (com Tom, Capotraste se houver, lista de Acordes, BPM e Batida), [LETRA] completa verso a verso e [CIFRA] 100% integral do início ao fim com todas as etiquetas padrão ([Intro], [Primeira Parte], [Pré-Refrão], [Refrão], [Segunda Parte], [Interlúdio], [Ponte], [Refrão Final], [Final]). Sem resumos nem abreviações.`
         }]
       })
     });
@@ -1590,8 +1870,9 @@ async function generateAILouvor(query) {
 
     if (result.trim()) {
       const parsedSong = parseAIWorshipResponse(result, query);
+      if (ytMatch) parsedSong.youtubeId = ytMatch;
       saveCustomWorship(parsedSong);
-      toast("Louvor preparado para a banda! 🎸");
+      toast("Cifra gerada no padrão Cifra Club! 🎸");
       openSongForBand(parsedSong);
     }
   } catch (err) {
@@ -1634,13 +1915,14 @@ function renderCurrentBandView() {
 
   const youtubePlayerHtml = buildYoutubePlayerHtml(s);
   const activeYtId = s.youtubeId || localStorage.getItem("worship_yt_" + s.id) || null;
+  const cifraClubBarHtml = buildCifraClubChordsBar(transposedCifra, s);
 
   if (curBandMode === "duo") {
     // ---------------- MODO DUPLO: LETRA NO CANTO & CIFRAS AO LADO ----------------
     reader.innerHTML = `
       <div class="duo-worship-container">
         <h2>${s.isHarpa ? `Hino ${s.n} · ` : ""}${escapeHtml(s.title)}</h2>
-        <div class="testament">${escapeHtml(s.artist || "Louvor Congregacional")} · Letra no Canto & Cifras ao Lado</div>
+        <div class="testament">${escapeHtml(s.artist || "Louvor Congregacional")} · Letra no Canto & Cifras ao Lado (Padrão Cifra Club)</div>
 
         ${youtubePlayerHtml}
 
@@ -1679,8 +1961,9 @@ function renderCurrentBandView() {
           <div class="duo-col duo-cifra-col">
             <div class="duo-col-header">
               <span class="duo-col-badge">🎸 CIFRA (VIOLÃO / TECLADO)</span>
-              <span class="duo-col-sub">Tom: ${escapeHtml(currentKey)} · Acordes sobre a letra</span>
+              <span class="duo-col-sub">Tom: ${escapeHtml(currentKey)} · Padrão Cifra Club</span>
             </div>
+            ${cifraClubBarHtml}
             <div class="cifra-view-container" id="cifraViewContainer" style="font-size: ${curCifraFontSize}px">
               ${formattedCifraHtml || '<div class="empty">Cifra não disponível.</div>'}
             </div>
@@ -1765,6 +2048,8 @@ function renderCurrentBandView() {
         </div>
       </div>
 
+      ${cifraClubBarHtml}
+
       <div class="cifra-view-container" id="cifraViewContainer" style="font-size: ${curCifraFontSize}px">
         ${formattedCifraHtml || '<div class="empty">Cifra não disponível. Toque em Editar para colar.</div>'}
       </div>
@@ -1822,6 +2107,8 @@ function renderCurrentBandView() {
           <button type="button" class="cifra-tool-btn" id="btnEditCifra">✏️ Editar</button>
         </div>
       </div>
+
+      ${cifraClubBarHtml}
 
       <div class="cifra-view-container" id="cifraViewContainer" style="font-size: ${curCifraFontSize}px">
         ${formattedCifraHtml || '<div class="empty">Cifra não disponível.</div>'}
@@ -2180,14 +2467,44 @@ function renderHarpaList(submitTriggered = false) {
   listEl.innerHTML = html;
   listEl.scrollTop = 0;
 
-  $("#btnRunAILouvor")?.addEventListener("click", () => generateAILouvor(rawQ));
+  $("#btnRunAILouvor")?.addEventListener("click", () => {
+    if (/https?:\/\//i.test(rawQ) || /cifraclub\.com|youtube\.com|youtu\.be/i.test(rawQ)) {
+      handleSongLinkInput(rawQ);
+    } else {
+      generateAILouvor(rawQ);
+    }
+  });
 }
 
 function initHarpaEvents() {
   let timer;
+  const searchInput = $("#harpaSearchInput");
+
+  searchInput?.addEventListener("paste", (e) => {
+    const text = (e.clipboardData || window.clipboardData)?.getData("text") || "";
+    if (text && (/https?:\/\//i.test(text) || /cifraclub\.com|youtube\.com|youtu\.be/i.test(text))) {
+      e.preventDefault();
+      searchInput.value = text.trim();
+      handleSongLinkInput(text.trim());
+    }
+  });
+
+  $("#btnDemoTudoEPerda")?.addEventListener("click", () => {
+    handleSongLinkInput("https://www.cifraclub.com.br/felipe-rodrigues/tudo-e-perda/");
+  });
+
+  $("#btnDemoNaoHaBarreiras")?.addEventListener("click", () => {
+    handleSongLinkInput("https://www.youtube.com/watch?v=TVlBJwDZu0M");
+  });
+
   $("#harpaSearchForm").onsubmit = (e) => {
     e.preventDefault();
     clearTimeout(timer);
+    const q = (searchInput?.value || "").trim();
+    if (/https?:\/\//i.test(q) || /cifraclub\.com|youtube\.com|youtu\.be/i.test(q)) {
+      handleSongLinkInput(q);
+      return;
+    }
     renderHarpaList(true);
   };
   $("#harpaSearchInput").oninput = () => {
@@ -2233,7 +2550,7 @@ function initHarpaEvents() {
     $("#btnSwitchHarpa").classList.remove("active");
     $("#worshipBanner").hidden = false;
     $("#harpaFilters").hidden = true;
-    $("#harpaSearchInput").placeholder = "Digite o nome da música (ex: Bondade de Deus, A Casa É Sua, Raridade)…";
+    $("#harpaSearchInput").placeholder = "Cole o link do YouTube, Cifra Club ou digite o nome da música…";
     curHarpaRange = "LOUVORES";
     $("#harpaSearchInput").value = "";
     renderHarpaList(false);

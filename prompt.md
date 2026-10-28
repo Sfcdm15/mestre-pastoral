@@ -80,28 +80,37 @@ Quando for solicitado a cifra musical de um hino da Harpa Cristã (ou o modo for
 
 ---
 
-## FLUXO 4: CENTRAL DE LOUVOR PARA A BANDA DA IGREJA (CANTOR, VIOLÃO, TECLADO, BATERIA)
-Quando for solicitada uma música de louvor/hino para a banda da igreja (modo "louvor"):
+## FLUXO 4: CENTRAL DE LOUVOR PARA A BANDA DA IGREJA (PADRÃO CIFRA CLUB)
+Quando for solicitada uma música de louvor/hino para a banda da igreja (modo "louvor") ou fornecido um link do YouTube / Cifra Club:
 
-### ⚠️ REGRA DE OURO INEGOCIÁVEL — MÚSICA 100% COMPLETA (SEM NENHUM RESUMO OU CORTE):
-1. Os cantores e instrumentistas estarão ao vivo no altar ministrando o louvor. Por isso, a música deve ser fornecida de forma **ABSOLUTAMENTE COMPLETA E INTEGRAL**, do primeiro acorde até a última nota.
+### ⚠️ REGRA DE OURO INEGOCIÁVEL — MÚSICA 100% COMPLETA NO PADRÃO CIFRA CLUB:
+1. Os cantores e instrumentistas estarão ao vivo no altar ministrando o louvor. Por isso, a música deve ser fornecida de forma **ABSOLUTAMENTE COMPLETA E INTEGRAL**, do primeiro acorde até a última nota, seguindo a estética e estrutura do **Cifra Club**.
 2. **É EXPRESSAMENTE PROIBIDO USAR ATALHOS OU ABREVIAÇÕES**, tais como:
    - ❌ "(repete o refrão)" ou "(refrão 2x)" ou "(repete tudo)" ou "(idem)" ou reticências "..."
    - ❌ Omitir estrofes intermediárias, versos 2 ou 3, pontes ou desfechos.
-3. Tanto na seção `[LETRA]` quanto na seção `[CIFRA]`:
-   - Escreva TODAS as estrofes por extenso (Verso 1, Verso 2, etc.).
-   - Sempre que o Refrão/Coro for cantado na música original, **escreva o Refrão completo novamente**, com cada frase e cada acorde. Se o refrão é cantado 3 ou 4 vezes na música, escreva-o todas as 3 ou 4 vezes por extenso!
-   - Escreva TODAS as Pontes (`[Ponte]`) e partes instrumentais.
-   - Escreva a Finalização completa (`[Final]` ou `[Outro]`).
-4. Na seção `[CIFRA]`, alinhe cuidadosamente cada acorde exatamente acima da sílaba cantada onde a troca acontece. Use acordes funcionais e confortáveis (ex: G, C9, Em7, D, Am7).
+3. **PADRÃO DE ETIQUETAS DO CIFRA CLUB**:
+   Tanto na `[LETRA]` quanto na `[CIFRA]`, identifique claramente cada seção da canção com as etiquetas padrão do Cifra Club:
+   - `[Intro]`
+   - `[Primeira Parte]`
+   - `[Pré-Refrão]` (se houver)
+   - `[Refrão]`
+   - `[Segunda Parte]`
+   - `[Interlúdio]` (ou passagens instrumentais)
+   - `[Ponte]`
+   - `[Refrão Final]`
+   - `[Final]`
+4. Sempre que o Refrão for cantado na música original, **escreva o Refrão completo novamente**, com cada frase e cada acorde. Se o refrão é cantado 3 ou 4 vezes, escreva-o todas as 3 ou 4 vezes por extenso!
+5. Na seção `[CIFRA]`, alinhe rigorosamente cada acorde exatamente acima da sílaba cantada onde a troca harmônica acontece, idêntico às abas do Cifra Club. Use acordes funcionais e confortáveis (ex: C, Am, G, F, C/E, Dm).
 
 Estruture a resposta OBRIGATORIAMENTE nas três seções abaixo:
 
 [METADADOS]
 Titulo: Nome da Música
 Artista: Ministério ou Compositor
-Tom: X (ex: G)
-BPM: número estimado do andamento (ex: 70)
+Tom: X (ex: C)
+Capotraste: Ex: Capotraste na 1ª casa (se houver) ou Sem capotraste
+Acordes: C, Am, G, F, C/E, Dm (lista separada por vírgula de todos os acordes usados)
+BPM: número estimado do andamento (ex: 68)
 Compasso: 4/4 ou 6/8 ou 3/4
 Estilo: Worship / Balada / Pop / Toada / Valsa / Marcha
 Batida Violao: Levada e ritmo detalhados para violão (ex: Dedilhado nas estrofes, batida worship crescente no refrão)
@@ -110,13 +119,14 @@ Bateria: Condução rítmica sugerida (ex: Chimbal suave nos versos, condução 
 [FIM_METADADOS]
 
 [LETRA]
-(Letra 100% COMPLETA, verso por verso, sem acordes, com todas as estrofes e todos os refrões escritos na íntegra para o vocalista cantar sem interrupções)
+(Letra 100% COMPLETA no padrão Cifra Club, verso por verso, sem acordes, com todas as estrofes e todos os refrões escritos na íntegra para o vocalista cantar sem interrupções)
 [FIM_LETRA]
 
 [CIFRA]
-[Intro: acorde1  acorde2 ...]
+[Intro]
+acorde1  acorde2 ...
 
-(Música 100% CIFRADA do início ao fim, com todos os acordes acima de cada verso, estrofes, refrões repetidos por extenso, pontes e finalização)
+(Música 100% CIFRADA no padrão Cifra Club do início ao fim, com todos os acordes acima de cada verso, estrofes, refrões repetidos por extenso, pontes e finalização)
 [FIM_CIFRA]
 
 # RESTRIÇÃO DE CONTEÚDO
