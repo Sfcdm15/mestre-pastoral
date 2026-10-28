@@ -750,29 +750,56 @@ const BUILTIN_LOUVORES = [
     batidaViolao: "Dedilhado suave nas estrofes (P-i-m-a); batida 4/4 crescente no refrão (↓  ↓↑  ↑↓↑)",
     teclado: "Pad atmosférico sustentando a harmonia; piano com notas de apoio e arpejos nas passagens",
     bateria: "Verso 1 em silêncio; verso 2 entra com bumbo macio e tom-tons; refrão com condução no prato e bumbo marcante",
-    lyrics: `Te amarei, Senhor, Tua graça nunca falha
+    lyrics: `[Verso 1]
+Te amarei, Senhor, Tua graça nunca falha
 Todos os meus dias em Tuas mãos estão
 Desde o amanhecer até o sol se pôr
 Eu cantarei da bondade de Deus
 
+[Coro]
 És fiel em todo o tempo
 Em todo o tempo Tu és tão, tão bom
 Com todo o fôlego que tenho
 Eu cantarei da bondade de Deus
 
+[Verso 2]
 Tua voz me guia através do fogo
 Na escuridão, Tua presença é paz
 Eu Te conheço como Pai e amigo
 Eu tenho vivido na bondade de Deus
 
+[Coro]
+És fiel em todo o tempo
+Em todo o tempo Tu és tão, tão bom
+Com todo o fôlego que tenho
+Eu cantarei da bondade de Deus
+
+[Ponte]
 Tua bondade me seguirá, me seguirá, Senhor
 Tua bondade me seguirá, me seguirá, Senhor
-Eu me rendo a Ti, Te dou o meu ser
-Entrego tudo a Ti`,
+Eu me rendo a Ti, Te dou o meu ser, entrego tudo a Ti
+Tua bondade me seguirá, me seguirá, Senhor
+
+[Ponte]
+Tua bondade me seguirá, me seguirá, Senhor
+Tua bondade me seguirá, me seguirá, Senhor
+Eu me rendo a Ti, Te dou o meu ser, entrego tudo a Ti
+Tua bondade me seguirá, me seguirá, Senhor
+
+[Coro]
+És fiel em todo o tempo
+Em todo o tempo Tu és tão, tão bom
+Com todo o fôlego que tenho
+Eu cantarei da bondade de Deus
+
+[Final]
+Eu cantarei da bondade de Deus
+Eu cantarei da bondade de Deus`,
     cifra: `[Tom: G]
 
 [Intro: G  C  G  C]
 
+[Verso 1]
        G             C
 Te amarei, Senhor, Tua graça nunca falha
        G                      D
@@ -792,6 +819,7 @@ Com todo o fôlego que tenho
        G      D         G
 Eu cantarei da bondade de Deus
 
+[Verso 2]
          G               C
 Tua voz me guia através do fogo
         G                   D
@@ -801,6 +829,16 @@ Eu Te conheço como Pai e amigo
         G       D          G
 Eu tenho vivido na bondade de Deus
 
+[Coro]
+ C                      G
+És fiel em todo o tempo
+ C                     G           D
+Em todo o tempo Tu és tão, tão bom
+ C                       Em
+Com todo o fôlego que tenho
+       G      D         G
+Eu cantarei da bondade de Deus
+
 [Ponte]
        C                 D
 Tua bondade me seguirá, me seguirá, Senhor
@@ -808,8 +846,38 @@ Tua bondade me seguirá, me seguirá, Senhor
 Tua bondade me seguirá, me seguirá, Senhor
        G/B            C
 Eu me rendo a Ti, Te dou o meu ser
-       D             G
-Entrego tudo a Ti`
+       D
+Entrego tudo a Ti
+       C                 D            G
+Tua bondade me seguirá, me seguirá, Senhor
+
+[Ponte]
+       C                 D
+Tua bondade me seguirá, me seguirá, Senhor
+       C                 D
+Tua bondade me seguirá, me seguirá, Senhor
+       G/B            C
+Eu me rendo a Ti, Te dou o meu ser
+       D
+Entrego tudo a Ti
+       C                 D            G
+Tua bondade me seguirá, me seguirá, Senhor
+
+[Coro]
+ C                      G
+És fiel em todo o tempo
+ C                     G           D
+Em todo o tempo Tu és tão, tão bom
+ C                       Em
+Com todo o fôlego que tenho
+       G      D         G
+Eu cantarei da bondade de Deus
+
+[Final]
+       Em     D         C
+Eu cantarei da bondade de Deus
+       G      D         G
+Eu cantarei da bondade de Deus`
   },
   {
     id: "louvor:a-casa-e-sua",
@@ -822,19 +890,50 @@ Entrego tudo a Ti`
     batidaViolao: "Dedilhado no verso; batida worship com dinâmica crescente a partir do refrão",
     teclado: "Ambiência com Pad em Sol e notas em oitavas no piano",
     bateria: "Começa suave com aro de caixa e bumbo discreto; explosão dinâmica na ponte e refrão final",
-    lyrics: `Você é bem-vindo aqui, a casa é Sua, pode entrar
+    lyrics: `[Verso 1]
+Você é bem-vindo aqui, a casa é Sua, pode entrar
 Me esvazio de mim, me esvazio de mim
 Sopra Teu vento aqui, toma o Teu lugar
 Me esvazio de mim, me esvazio de mim
 
+[Coro]
 Essa casa é Sua casa, nós deixamos ela pra Você, Jesus
 Essa casa é Sua casa, nós deixamos ela pra Você, Jesus
+
+[Verso 2]
+Você é bem-vindo aqui, a casa é Sua, pode entrar
+Me esvazio de mim, me esvazio de mim
+Sopra Teu vento aqui, toma o Teu lugar
+Me esvazio de mim, me esvazio de mim
+
+[Coro]
+Essa casa é Sua casa, nós deixamos ela pra Você, Jesus
+Essa casa é Sua casa, nós deixamos ela pra Você, Jesus
+
+[Ponte]
 Apareça, que o Teu nome cresça
-Enche este lugar, enche este lugar`,
+Enche este lugar, enche este lugar
+Apareça, que o Teu nome cresça
+Vem, Filho de Deus, enche este lugar
+
+[Ponte]
+Apareça, que o Teu nome cresça
+Enche este lugar, enche este lugar
+Apareça, que o Teu nome cresça
+Vem, Filho de Deus, enche este lugar
+
+[Coro]
+Essa casa é Sua casa, nós deixamos ela pra Você, Jesus
+Essa casa é Sua casa, nós deixamos ela pra Você, Jesus
+
+[Final]
+Essa casa é Sua casa, Jesus
+Deixamos ela pra Você`,
     cifra: `[Tom: G]
 
 [Intro: G  C  Em  D]
 
+[Verso 1]
        G                             C
 Você é bem-vindo aqui, a casa é Sua, pode entrar
        Em            D
@@ -849,10 +948,54 @@ Me esvazio de mim, me esvazio de mim
 Essa casa é Sua casa, nós deixamos ela pra Você, Jesus
       Em                D
 Essa casa é Sua casa, nós deixamos ela pra Você, Jesus
+
+[Verso 2]
+       G                             C
+Você é bem-vindo aqui, a casa é Sua, pode entrar
+       Em            D
+Me esvazio de mim, me esvazio de mim
+       G                           C
+Sopra Teu vento aqui, toma o Teu lugar
+       Em            D
+Me esvazio de mim, me esvazio de mim
+
+[Coro]
+      C                 G
+Essa casa é Sua casa, nós deixamos ela pra Você, Jesus
+      Em                D
+Essa casa é Sua casa, nós deixamos ela pra Você, Jesus
+
+[Ponte]
      C              G
 Apareça, que o Teu nome cresça
      Em             D
-Enche este lugar, enche este lugar`
+Enche este lugar, enche este lugar
+     C              G
+Apareça, que o Teu nome cresça
+     Em             D
+Vem, Filho de Deus, enche este lugar
+
+[Ponte]
+     C              G
+Apareça, que o Teu nome cresça
+     Em             D
+Enche este lugar, enche este lugar
+     C              G
+Apareça, que o Teu nome cresça
+     Em             D
+Vem, Filho de Deus, enche este lugar
+
+[Coro]
+      C                 G
+Essa casa é Sua casa, nós deixamos ela pra Você, Jesus
+      Em                D
+Essa casa é Sua casa, nós deixamos ela pra Você, Jesus
+
+[Final]
+      C                 G
+Essa casa é Sua casa, Jesus
+       Em          D    G
+Deixamos ela pra Você`
   },
   {
     id: "louvor:raridade",
@@ -865,21 +1008,47 @@ Enche este lugar, enche este lugar`
     batidaViolao: "Batida pop/balada (↓  ↓↑  ↑↓↑)",
     teclado: "Arpejos clássicos de piano gospel e cordas/strings de fundo",
     bateria: "Caixa no tempo 2 e 4 com bumbo firme no tempo 1",
-    lyrics: `Não consigo ir além do Teu olhar
+    lyrics: `[Verso 1]
+Não consigo ir além do Teu olhar
 Tudo o que eu consigo é me apaixonar
 Chego a pensar que o Teu amor por mim é uma ilusão
 Eu não consigo entender
 
+[Verso 2]
+O ouro se desfaz, você não se desfez
+A dor te castigou, mas você ficou de pé
+Deus não te esqueceu, Ele te chamou pelo nome
+O Senhor é quem sustenta a sua fé
+
+[Coro]
 Você é um espelho que reflete a imagem do Senhor
 Não chore se o mundo ainda não notou
 Já é o bastante Deus reconhecer o seu valor
 Você é precioso, mais raro que o ouro puro de Ofir
 Se você desistiu, Deus não vai desistir
-Você é uma joia que o Senhor fez com as próprias mãos`,
+Você é uma joia que o Senhor fez com as próprias mãos
+
+[Verso 3]
+Não pare de adorar, você foi feito pra vencer
+Deus vai restituir tudo o que você perdeu
+A tua história não termina aqui no chão
+Levante a cabeça, Deus cuida de ti
+
+[Coro]
+Você é um espelho que reflete a imagem do Senhor
+Não chore se o mundo ainda não notou
+Já é o bastante Deus reconhecer o seu valor
+Você é precioso, mais raro que o ouro puro de Ofir
+Se você desistiu, Deus não vai desistir
+Você é uma joia que o Senhor fez com as próprias mãos
+
+[Final]
+Você é uma joia que o Senhor fez com as próprias mãos!`,
     cifra: `[Tom: G]
 
 [Intro: G  D/F#  Em  C]
 
+[Verso 1]
        G              D/F#
 Não consigo ir além do Teu olhar
        Em               C
@@ -888,6 +1057,16 @@ Tudo o que eu consigo é me apaixonar
 Chego a pensar que o Teu amor por mim
        Em               C
 É uma ilusão, eu não consigo entender
+
+[Verso 2]
+        G               D/F#
+O ouro se desfaz, você não se desfez
+         Em                C
+A dor te castigou, mas você ficou de pé
+       G                D/F#
+Deus não te esqueceu, Ele te chamou pelo nome
+       Em               C
+O Senhor é quem sustenta a sua fé
 
 [Coro]
        G                       D/F#
@@ -901,7 +1080,37 @@ Você é precioso, mais raro que o ouro puro de Ofir
        G               D/F#
 Se você desistiu, Deus não vai desistir
        Em            C
-Você é uma joia que o Senhor fez!`
+Você é uma joia que o Senhor fez com as próprias mãos
+
+[Verso 3]
+       G                 D/F#
+Não pare de adorar, você foi feito pra vencer
+       Em                 C
+Deus vai restituir tudo o que você perdeu
+       G                D/F#
+A tua história não termina aqui no chão
+       Em                C
+Levante a cabeça, Deus cuida de ti
+
+[Coro]
+       G                       D/F#
+Você é um espelho que reflete a imagem do Senhor
+       Em                      C
+Não chore se o mundo ainda não notou
+       G                       D/F#
+Já é o bastante Deus reconhecer o seu valor
+       Em                      C
+Você é precioso, mais raro que o ouro puro de Ofir
+       G               D/F#
+Se você desistiu, Deus não vai desistir
+       Em            C
+Você é uma joia que o Senhor fez com as próprias mãos
+
+[Final]
+       G               D/F#
+Você é precioso, mais raro que o ouro de Ofir
+       Em            C                       G
+Você é uma joia que o Senhor fez com as próprias mãos!`
   }
 ];
 
@@ -1150,10 +1359,10 @@ async function generateAILouvor(query) {
   const reader = $("#harpaReader");
   reader.innerHTML = `
     <h2>Buscando Louvor: “${escapeHtml(query)}”…</h2>
-    <div class="testament">O Mestre Pastoral está montando o arranjo completo para a banda</div>
+    <div class="testament">O Mestre Pastoral está montando a música 100% COMPLETA para a banda</div>
     <div class="loading" style="padding:40px 10px;text-align:center">
-      🎸 Gerando Letra para o Cantor, Cifras para Violão e Teclado, e Ritmo para a Bateria…<br>
-      <span style="font-size:.85rem;color:var(--muted)">Aguarde alguns segundos.</span>
+      🎸 Gerando Letra Completa sem cortes para o Cantor, Cifras Integrais para Violão e Teclado, e Ritmo para a Bateria…<br>
+      <span style="font-size:.85rem;color:var(--muted)">Aguarde alguns segundos enquanto todas as estrofes, refrões e pontes são preparados.</span>
     </div>
   `;
 
@@ -1165,7 +1374,7 @@ async function generateAILouvor(query) {
         mode: "louvor",
         messages: [{
           role: "user",
-          text: `Gere o guia completo do louvor ou hino '${query}' para a equipe de louvor da igreja. Siga obrigatoriamente o FLUXO 4: [METADADOS], [LETRA] e [CIFRA].`
+          text: `Gere a música de louvor COMPLETA '${query}' para a equipe de louvor e banda da igreja, 100% integral do início ao fim sem nenhum corte ou resumo. É OBRIGATÓRIO incluir TODAS as estrofes, TODOS os refrões por extenso (repetindo a letra e os acordes todas as vezes que a música canta, sem usar atalhos como '(repete)' ou '2x'), todas as pontes e o final. Siga com rigor absoluto o FLUXO 4: [METADADOS], [LETRA] e [CIFRA].`
         }]
       })
     });

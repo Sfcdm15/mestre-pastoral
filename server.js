@@ -45,7 +45,7 @@ const MODE_HINTS = {
   estudo: "[O usuário escolheu o MÓDULO DE ESTUDO — use o FLUXO 1]\n",
   duvida: "[O usuário escolheu o MINI-CHAT DE DÚVIDAS — use o FLUXO 2]\n",
   cifra: "[O usuário solicitou a CIFRA MUSICAL deste hino da Harpa Cristã — use o FLUXO 3: informe o Tom, a Intro e a letra cifrada completa]\n",
-  louvor: "[O usuário solicitou o GUIA COMPLETO DE LOUVOR PARA A BANDA DA IGREJA — use o FLUXO 4: [METADADOS], [LETRA], e [CIFRA] completa]\n",
+  louvor: "[O usuário solicitou a MÚSICA COMPLETA DE LOUVOR PARA A BANDA DA IGREJA — use o FLUXO 4: Forneça a música 100% COMPLETA e integral do início ao fim (todas as estrofes, todos os refrões repetidos por extenso, todas as pontes e finalização, sem cortes, sem resumos e sem atalhos como '(repete)' ou '2x') em [METADADOS], [LETRA] e [CIFRA]]\n",
 };
 
 const MIME = {
@@ -133,13 +133,13 @@ async function handleChat(req, res) {
       }
       requestBody = {
         contents: gemmaContents,
-        generationConfig: { temperature: 0.4, maxOutputTokens: 4096 },
+        generationConfig: { temperature: 0.3, maxOutputTokens: 8192 },
       };
     } else {
       requestBody = {
         system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
         contents,
-        generationConfig: { temperature: 0.4, maxOutputTokens: 4096 },
+        generationConfig: { temperature: 0.3, maxOutputTokens: 8192 },
       };
     }
 
